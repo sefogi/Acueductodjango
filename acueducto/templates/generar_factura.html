@@ -1,0 +1,65 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Generar Factura</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+</head>
+<body>
+    <div class="container">
+        <nav class="nav-menu">
+            <a href="{% url 'index' %}">Crear Usuario</a>
+            <a href="{% url 'lista_usuarios' %}">Lista de Usuarios</a>
+            <a href="{% url 'generar_factura' %}" class="active">Generar Factura</a>
+        </nav>
+
+        <h1>Generar Factura</h1>
+
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="message {{ message.tags }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="form-container">
+            <form method="POST" class="factura-form">
+                {% csrf_token %}
+                <button type="submit" name="generar_todas" class="submit-btn generate-all">
+                    Generar Facturas de Todos los Usuarios
+                </button>
+            </form>
+
+            <div class="separator">
+                <span>o generar factura individual</span>
+            </div>
+
+            <form method="POST" class="factura-form">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="contrato">Seleccionar Usuario:</label>
+                    <select id="contrato" name="contrato" required class="select-user">
+                        <option value="">Seleccione un usuario...</option>
+                        {% for usuario in usuarios %}
+                        <option value="{{ usuario.contrato }}" {% if usuario.contrato == contrato_preseleccionado %}selected{% endif %}>
+                            {{ usuario.contrato }} - {{ usuario.name }} {{ usuario.lastname }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" name="descargar" class="submit-btn">Descargar Factura</button>
+                    <button type="submit" name="enviar_email" class="submit-btn email-btn">Enviar por Email</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="{% static 'script.js' %}"></script>
+</body>
+</html>

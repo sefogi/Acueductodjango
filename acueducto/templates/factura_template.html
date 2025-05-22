@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Factura - {{ usuario.contrato }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        .factura {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .info-cliente {
+            margin-bottom: 30px;
+        }
+        .info-cliente h2 {
+            color: #666;
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        .detalles {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        .detalles th, .detalles td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        .detalles th {
+            background-color: #f5f5f5;
+        }
+        .total {
+            text-align: right;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .footer {
+            margin-top: 50px;
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="factura">
+        <div class="header">
+            <h1>Factura del Acueducto</h1>
+            <p>Fecha: {{ usuario.date|date:"d/m/Y" }}</p>
+        </div>
+
+        <div class="info-cliente">
+            <h2>Información del Cliente</h2>
+            <p><strong>Contrato:</strong> {{ usuario.contrato }}</p>
+            <p><strong>Nombre:</strong> {{ usuario.name }} {{ usuario.lastname }}</p>
+            <p><strong>Dirección:</strong> {{ usuario.address }}</p>
+            <p><strong>Email:</strong> {{ usuario.email }}</p>
+            <p><strong>Teléfono:</strong> {{ usuario.phone }}</p>
+        </div>
+
+        <table class="detalles">
+            <thead>
+                <tr>
+                    <th>Descripción</th>
+                    <th>Lectura</th>
+                    <th>Valor Base</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Consumo de Agua</td>
+                    <td>{{ usuario.lectura }}</td>
+                    <td>$1.000 por unidad</td>
+                    <td>${{ usuario.lectura|floatformat:3|default:"0" }}</td>
+                </tr>
+                <!-- Aquí puedes añadir más conceptos si es necesario -->
+            </tbody>
+        </table>
+
+        <div class="total">
+            Total a Pagar: ${{ usuario.lectura|floatformat:3|default:"0" }}
+        </div>
+
+        <div class="footer">
+            <p>Esta factura es un documento válido para efectos fiscales.</p>
+            <p>Para cualquier consulta, comuníquese al teléfono: (315) 243-358</p>
+        </div>
+    </div>
+</body>
+</html>

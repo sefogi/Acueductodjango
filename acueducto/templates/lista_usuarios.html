@@ -1,0 +1,67 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Lista de Usuarios</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+</head>
+<body>
+    <div class="container">
+        <nav class="nav-menu">
+            <a href="{% url 'index' %}">Crear Usuario</a>
+            <a href="{% url 'lista_usuarios' %}" class="active">Lista de Usuarios</a>
+        </nav>
+
+        <h1>Lista de Usuarios del Acueducto</h1>
+        
+        <div class="search-container">
+            <form method="GET" class="search-form">
+                <input 
+                    type="text" 
+                    name="busqueda" 
+                    placeholder="Buscar por contrato o dirección..." 
+                    value="{{ busqueda }}"
+                >
+                <button type="submit" class="search-btn">Buscar</button>
+            </form>
+        </div>
+
+        <table class="users-table">
+            <thead>
+                <tr>
+                    <th>Contrato</th>
+                    <th>Fecha</th>
+                    <th>Nombre</th>
+                    <th>Apellido</th>
+                    <th>Email</th>
+                    <th>Teléfono</th>
+                    <th>Dirección</th>
+                    <th>Lectura</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for usuario in usuarios %}
+                <tr>
+                    <td>{{ usuario.contrato }}</td>
+                    <td>{{ usuario.date|date:"d/m/Y" }}</td>
+                    <td>{{ usuario.name }}</td>
+                    <td>{{ usuario.lastname }}</td>
+                    <td>{{ usuario.email }}</td>
+                    <td>{{ usuario.phone }}</td>
+                    <td>{{ usuario.address }}</td>
+                    <td>{{ usuario.lectura }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8">No se encontraron usuarios.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <script src="{% static 'script.js' %}"></script>
+</body>
+</html>

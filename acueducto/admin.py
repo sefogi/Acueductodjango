@@ -1,9 +1,20 @@
 from django.contrib import admin
+from django import forms
 from .models import UserAcueducto
 
-# Register your models here.
+class UserAcueductoForm(forms.ModelForm):
+    date = forms.DateField(
+        widget=forms.DateInput(attrs={'type': 'date'}),
+        required=False
+    )
+    
+    class Meta:
+        model = UserAcueducto
+        fields = '__all__'
+
 @admin.register(UserAcueducto)
 class UsersAcueductoAdmin(admin.ModelAdmin):
+    form = UserAcueductoForm
     list_display = [
         'contrato',
         'date',
@@ -33,6 +44,6 @@ class UsersAcueductoAdmin(admin.ModelAdmin):
         'address',
         'lectura'
     ]
-    
+
 
 
