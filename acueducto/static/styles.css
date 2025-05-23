@@ -222,25 +222,36 @@ body {
 
 .input-group input {
     flex: 1;
-    padding: 10px;
+    padding: 12px;
     border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 16px;
 }
 
+.input-group input:focus {
+    outline: none;
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
 .btn-search {
     background-color: #4CAF50;
     color: white;
-    padding: 10px 20px;
+    padding: 12px 24px;
     border: none;
     border-radius: 4px;
     cursor: pointer;
     font-size: 16px;
-    transition: background-color 0.3s ease;
+    transition: all 0.3s ease;
 }
 
 .btn-search:hover {
     background-color: #45a049;
+    transform: translateY(-1px);
+}
+
+.btn-search:active {
+    transform: translateY(0);
 }
 
 .user-info {
@@ -250,6 +261,7 @@ body {
     padding: 15px;
     margin: 15px 0;
     text-align: center;
+    transition: all 0.3s ease;
 }
 
 .user-info p {
@@ -263,13 +275,19 @@ body {
     color: #212529;
 }
 
-.select-user {
+.form-control {
     width: 100%;
-    padding: 10px;
+    padding: 12px;
     border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 16px;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
 }
 
 .form-actions {

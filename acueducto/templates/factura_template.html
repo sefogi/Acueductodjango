@@ -120,8 +120,8 @@
             <div class="header-content">
                 <div class="empresa-info">
                     <h1 class="factura-titulo">Factura del Acueducto</h1>
-                    <p class="factura-numero">Factura N°: {{ usuario.contrato }}-{{ usuario.date|date:"Ymd" }}</p>
-                    <p>Fecha de Emisión: {{ usuario.date|date:"d/m/Y" }}</p>
+                    <p class="factura-numero">Factura N°: {{ usuario.contrato }}-{{ fecha_emision|date:"Ymd" }}</p>
+                    <p>Fecha de Emisión: {{ fecha_emision|date:"d/m/Y" }}</p>
                 </div>
             </div>
         </div>
@@ -161,7 +161,7 @@
                             <small>({{ lectura_anterior.fecha_lectura|date:"d/m/Y" }})</small>
                         </div>
                         <div class="lectura-info consumo-destacado">
-                            <strong>Consumo:</strong> {{ usuario.lectura|sub:lectura_anterior.lectura|floatformat:3 }} m³
+                            <strong>Diferencia de Consumo:</strong> {{ usuario.lectura|sub:lectura_anterior.lectura|floatformat:1 }} m³
                         </div>
                         {% endif %}
                     </td>

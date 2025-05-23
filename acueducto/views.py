@@ -11,6 +11,7 @@ from django.core.mail import EmailMessage
 from django.conf import settings
 from weasyprint import HTML
 from django.template.loader import get_template
+from datetime import datetime
 import tempfile
 import os
 from io import BytesIO
@@ -59,6 +60,7 @@ def lista_usuarios(request):
 def generar_factura(request):
     contrato_preseleccionado = request.GET.get('contrato', '')
     busqueda_contrato = request.GET.get('busqueda_contrato', '')
+    fecha_actual = datetime.now()
     
     if request.method == 'POST':
         if 'generar_todas' in request.POST:
@@ -89,8 +91,9 @@ def generar_factura(request):
             return response
         
         else:
-            # Código existente para generar factura individual
+            # Código para generar factura individual
             contrato = request.POST.get('contrato')
+            fecha_emision = request.POST.get('fecha_emision', datetime.now().strftime('%Y-%m-%d'))
             usuario = get_object_or_404(UserAcueducto, contrato=contrato)
             
             # Obtener el histórico de lecturas ordenado por fecha
@@ -106,6 +109,7 @@ def generar_factura(request):
                 'usuario': usuario,
                 'historico_lecturas': historico_lecturas,
                 'lectura_anterior': lectura_anterior,
+                'fecha_emision': fecha_emision,
             }
             html = template.render(context)
             
@@ -152,7 +156,8 @@ def generar_factura(request):
     return render(request, 'generar_factura.html', {
         'usuarios': usuarios,
         'contrato_preseleccionado': contrato_preseleccionado,
-        'busqueda_contrato': busqueda_contrato
+        'busqueda_contrato': busqueda_contrato,
+        'fecha_actual': fecha_actual,
     })
 
 def buscar_usuario_por_contrato(request):
