@@ -11,9 +11,9 @@
     <div class="container">
         <nav class="nav-menu">
             <a href="{% url 'index' %}">Crear Usuario</a>
+            <a href="{% url 'modificar_usuario' %}" class="active">Modificar Usuario</a>
             <a href="{% url 'lista_usuarios' %}">Lista de Usuarios</a>
             <a href="{% url 'generar_factura' %}">Generar Factura</a>
-            <a href="{% url 'modificar_usuario' %}" class="active">Modificar Usuario</a>
         </nav>
 
         <h1>Modificar Usuario</h1>
@@ -29,20 +29,19 @@
         {% endif %}
 
         <div class="form-container">
-            <form method="POST" class="modificar-form" id="buscarUsuarioForm">
-                {% csrf_token %}
+            <form method="GET" class="buscar-form" id="buscarUsuarioForm">
                 <div class="form-group">
                     <label for="buscar_contrato">Buscar por Número de Contrato:</label>
                     <div class="input-group">
                         <input type="text" 
                                id="buscar_contrato" 
-                               name="buscar_contrato" 
+                               name="contrato" 
                                placeholder="Ingrese número de contrato"
                                pattern="[0-9]+"
                                title="Por favor ingrese solo números"
                                class="form-control"
                                value="{{ contrato_busqueda }}">
-                        <button type="button" id="buscarBtn" class="btn-search">Buscar</button>
+                        <button type="submit" class="btn-search">Buscar</button>
                     </div>
                 </div>
             </form>
@@ -98,26 +97,5 @@
             {% endif %}
         </div>
     </div>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const buscarBtn = document.getElementById('buscarBtn');
-            const buscarForm = document.getElementById('buscarUsuarioForm');
-            
-            buscarBtn.addEventListener('click', function() {
-                const contrato = document.getElementById('buscar_contrato').value;
-                if (contrato) {
-                    window.location.href = `?contrato=${contrato}`;
-                }
-            });
-
-            document.getElementById('buscar_contrato').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    buscarBtn.click();
-                }
-            });
-        });
-    </script>
 </body>
 </html>

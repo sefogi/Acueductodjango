@@ -257,6 +257,7 @@ def modificar_usuario(request):
             usuario = UserAcueducto.objects.get(contrato=contrato_busqueda)
         except UserAcueducto.DoesNotExist:
             messages.error(request, 'Usuario no encontrado')
+            return redirect('modificar_usuario')
 
     if request.method == 'POST' and 'actualizar' in request.POST:
         try:
