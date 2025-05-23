@@ -39,6 +39,10 @@ h1 {
     background-color: #f8f8f8;
 }
 
+.users-table td:last-child {
+    text-align: center;
+}
+
 body {
     font-family: Arial, sans-serif;
     line-height: 1.6;
@@ -122,25 +126,26 @@ body {
 }
 
 .nav-menu {
-    background-color: white;
-    padding: 15px;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-    margin-bottom: 30px;
     display: flex;
-    gap: 20px;
+    gap: 10px;
+    margin-bottom: 20px;
+    background-color: white;
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .nav-menu a {
+    padding: 8px 16px;
     text-decoration: none;
     color: #666;
-    padding: 8px 16px;
     border-radius: 4px;
-    transition: all 0.3s ease;
+    transition: background-color 0.3s ease;
 }
 
 .nav-menu a:hover {
     background-color: #f5f5f5;
+    color: #333;
 }
 
 .nav-menu a.active {
@@ -148,12 +153,24 @@ body {
     color: white;
 }
 
+.header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.actions-container {
+    display: flex;
+    gap: 10px;
+}
+
 .search-container {
+    margin-bottom: 20px;
+    padding: 15px;
     background-color: white;
-    padding: 20px;
     border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-    margin-bottom: 30px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .search-form {
@@ -163,7 +180,7 @@ body {
 
 .search-form input {
     flex: 1;
-    padding: 10px;
+    padding: 8px;
     border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 16px;
@@ -172,11 +189,11 @@ body {
 .search-btn {
     background-color: #4CAF50;
     color: white;
-    padding: 10px 20px;
+    padding: 8px 16px;
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 14px;
 }
 
 .search-btn:hover {
@@ -197,6 +214,55 @@ body {
     margin: 0 auto;
 }
 
+.input-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.input-group input {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.btn-search {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
+}
+
+.btn-search:hover {
+    background-color: #45a049;
+}
+
+.user-info {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    padding: 15px;
+    margin: 15px 0;
+    text-align: center;
+}
+
+.user-info p {
+    margin: 0;
+    color: #495057;
+    font-size: 16px;
+}
+
+.user-info span {
+    font-weight: bold;
+    color: #212529;
+}
+
 .select-user {
     width: 100%;
     padding: 10px;
@@ -210,6 +276,7 @@ body {
     display: flex;
     gap: 10px;
     justify-content: center;
+    margin-top: 20px;
 }
 
 .email-btn {
@@ -283,4 +350,19 @@ body {
     padding: 0 15px;
     color: #666;
     font-size: 14px;
+}
+
+.btn-historico {
+    display: inline-block;
+    padding: 6px 12px;
+    background-color: #007bff;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+}
+
+.btn-historico:hover {
+    background-color: #0056b3;
 }

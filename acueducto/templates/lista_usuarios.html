@@ -38,7 +38,8 @@
                     <th>Email</th>
                     <th>Teléfono</th>
                     <th>Dirección</th>
-                    <th>Lectura</th>
+                    <th>Última Lectura</th>
+                    <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -52,10 +53,13 @@
                     <td>{{ usuario.phone }}</td>
                     <td>{{ usuario.address }}</td>
                     <td>{{ usuario.lectura }}</td>
+                    <td>
+                        <a href="{% url 'historico_lecturas' usuario.contrato %}" class="btn-historico">Ver Histórico</a>
+                    </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="8">No se encontraron usuarios.</td>
+                    <td colspan="9">No se encontraron usuarios.</td>
                 </tr>
                 {% endfor %}
             </tbody>

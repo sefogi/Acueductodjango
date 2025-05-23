@@ -39,19 +39,39 @@
                 <span>o generar factura individual</span>
             </div>
 
-            <form method="POST" class="factura-form">
+            <form method="POST" class="factura-form" id="facturaIndividualForm">
                 {% csrf_token %}
+                <div class="form-group">
+                    <label for="busqueda">Buscar por Número de Contrato:</label>
+                    <div class="input-group">
+                        <input type="text" 
+                               id="busqueda_contrato" 
+                               name="busqueda_contrato" 
+                               placeholder="Ingrese número de contrato"
+                               pattern="[0-9]+"
+                               title="Por favor ingrese solo números"
+                               class="form-control">
+                        <button type="button" id="buscarContrato" class="btn-search">Buscar</button>
+                    </div>
+                </div>
+
                 <div class="form-group">
                     <label for="contrato">Seleccionar Usuario:</label>
                     <select id="contrato" name="contrato" required class="select-user">
                         <option value="">Seleccione un usuario...</option>
                         {% for usuario in usuarios %}
-                        <option value="{{ usuario.contrato }}" {% if usuario.contrato == contrato_preseleccionado %}selected{% endif %}>
+                        <option value="{{ usuario.contrato }}" {% if usuario.contrato == contrato_preseleccionado %}selected{% endif %}
+                                data-nombre="{{ usuario.name }} {{ usuario.lastname }}">
                             {{ usuario.contrato }} - {{ usuario.name }} {{ usuario.lastname }}
                         </option>
                         {% endfor %}
                     </select>
                 </div>
+
+                <div id="usuarioInfo" class="user-info" style="display: none;">
+                    <p>Usuario seleccionado: <span id="nombreUsuario"></span></p>
+                </div>
+
                 <div class="form-actions">
                     <button type="submit" name="descargar" class="submit-btn">Descargar Factura</button>
                     <button type="submit" name="enviar_email" class="submit-btn email-btn">Enviar por Email</button>
@@ -60,6 +80,57 @@
         </div>
     </div>
 
-    <script src="{% static 'script.js' %}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const busquedaInput = document.getElementById('busqueda_contrato');
+            const selectUsuario = document.getElementById('contrato');
+            const buscarBtn = document.getElementById('buscarContrato');
+            const usuarioInfo = document.getElementById('usuarioInfo');
+            const nombreUsuarioSpan = document.getElementById('nombreUsuario');
+
+            // Función para buscar y seleccionar usuario por número de contrato
+            function buscarContrato() {
+                const numeroContrato = busquedaInput.value.trim();
+                const options = selectUsuario.options;
+                
+                for (let i = 0; i < options.length; i++) {
+                    if (options[i].value === numeroContrato) {
+                        selectUsuario.selectedIndex = i;
+                        mostrarInfoUsuario(options[i].dataset.nombre);
+                        return;
+                    }
+                }
+                
+                alert('No se encontró ningún usuario con ese número de contrato');
+            }
+
+            // Mostrar información del usuario seleccionado
+            function mostrarInfoUsuario(nombre) {
+                if (nombre) {
+                    nombreUsuarioSpan.textContent = nombre;
+                    usuarioInfo.style.display = 'block';
+                } else {
+                    usuarioInfo.style.display = 'none';
+                }
+            }
+
+            // Event listeners
+            buscarBtn.addEventListener('click', buscarContrato);
+            busquedaInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    buscarContrato();
+                }
+            });
+
+            selectUsuario.addEventListener('change', function() {
+                const selectedOption = this.options[this.selectedIndex];
+                mostrarInfoUsuario(selectedOption.dataset.nombre);
+                if (selectedOption.value) {
+                    busquedaInput.value = selectedOption.value;
+                }
+            });
+        });
+    </script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django import forms
-from .models import UserAcueducto
+from .models import UserAcueducto, HistoricoLectura
 
 class UserAcueductoForm(forms.ModelForm):
     date = forms.DateField(
@@ -44,6 +44,12 @@ class UsersAcueductoAdmin(admin.ModelAdmin):
         'address',
         'lectura'
     ]
+
+@admin.register(HistoricoLectura)
+class HistoricoLecturaAdmin(admin.ModelAdmin):
+    list_display = ('usuario', 'fecha_lectura', 'lectura')
+    list_filter = ('fecha_lectura',)
+    search_fields = ('usuario__contrato', 'usuario__name')
 
 
 

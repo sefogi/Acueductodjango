@@ -1,9 +1,12 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import UserAcueducto
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import authenticate, login, logout
+from django.contrib import messages
+from .models import UserAcueducto, HistoricoLectura
 from django.contrib import messages
 from django.db.models import Q
 from django.template.loader import render_to_string
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.core.mail import EmailMessage
 from django.conf import settings
 from weasyprint import HTML
@@ -55,6 +58,7 @@ def lista_usuarios(request):
 
 def generar_factura(request):
     contrato_preseleccionado = request.GET.get('contrato', '')
+    busqueda_contrato = request.GET.get('busqueda_contrato', '')
     
     if request.method == 'POST':
         if 'generar_todas' in request.POST:
@@ -89,14 +93,27 @@ def generar_factura(request):
             contrato = request.POST.get('contrato')
             usuario = get_object_or_404(UserAcueducto, contrato=contrato)
             
+            # Obtener el histórico de lecturas ordenado por fecha
+            historico_lecturas = usuario.lecturas.all().order_by('-fecha_lectura')[:6]
+            
+            # Obtener la lectura anterior si existe
+            lectura_anterior = None
+            if len(historico_lecturas) > 1:
+                lectura_anterior = historico_lecturas[1]
+            
             template = get_template('factura_template.html')
-            context = {'usuario': usuario}
+            context = {
+                'usuario': usuario,
+                'historico_lecturas': historico_lecturas,
+                'lectura_anterior': lectura_anterior,
+            }
             html = template.render(context)
             
             pdf_file = None
             try:
                 pdf_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
-                HTML(string=html).write_pdf(pdf_file.name)
+                base_url = settings.BASE_DIR / 'acueducto' / 'static'
+                HTML(string=html, base_url=str(base_url)).write_pdf(pdf_file.name)
                 
                 if 'enviar_email' in request.POST:
                     try:
@@ -126,10 +143,104 @@ def generar_factura(request):
                 if pdf_file and os.path.exists(pdf_file.name):
                     os.unlink(pdf_file.name)
                     
-    usuarios = UserAcueducto.objects.all()
+    usuarios = UserAcueducto.objects.all().order_by('contrato')
+    
+    # Si hay una búsqueda de contrato, filtramos los usuarios
+    if busqueda_contrato:
+        usuarios = usuarios.filter(contrato__icontains=busqueda_contrato)
+        
     return render(request, 'generar_factura.html', {
         'usuarios': usuarios,
-        'contrato_preseleccionado': contrato_preseleccionado
+        'contrato_preseleccionado': contrato_preseleccionado,
+        'busqueda_contrato': busqueda_contrato
+    })
+
+def buscar_usuario_por_contrato(request):
+    contrato = request.GET.get('contrato', '')
+    if contrato:
+        try:
+            usuario = UserAcueducto.objects.get(contrato=contrato)
+            return JsonResponse({
+                'found': True,
+                'nombre': f"{usuario.name} {usuario.lastname}",
+                'contrato': usuario.contrato
+            })
+        except UserAcueducto.DoesNotExist:
+            return JsonResponse({'found': False})
+    return JsonResponse({'found': False})
+
+def login_view(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        user = authenticate(request, username=username, password=password)
+        
+        if user is not None:
+            login(request, user)
+            return redirect('toma_lectura')
+        else:
+            messages.error(request, 'Usuario o contraseña incorrectos')
+    
+    return render(request, 'login.html')
+
+def logout_view(request):
+    logout(request)
+    return redirect('login')
+
+@login_required(login_url='login')
+def toma_lectura(request):
+    mensaje = None
+    usuario = None
+    historico = None
+    
+    if request.method == 'POST':
+        contrato = request.POST.get('contrato')
+        nueva_lectura = request.POST.get('lectura')
+        
+        try:
+            usuario = UserAcueducto.objects.get(contrato=contrato)
+            from django.utils import timezone
+            fecha_actual = timezone.now().date()
+            
+            # Crear el histórico de lectura
+            HistoricoLectura.objects.create(
+                usuario=usuario,
+                lectura=nueva_lectura,
+                fecha_lectura=fecha_actual
+            )
+            # Actualizar la lectura actual del usuario
+            usuario.lectura = nueva_lectura
+            usuario.date = fecha_actual
+            usuario.save()
+            
+            mensaje = "Lectura registrada exitosamente"
+            historico = usuario.lecturas.all()[:6]  # Obtener las últimas 6 lecturas
+            
+        except UserAcueducto.DoesNotExist:
+            mensaje = "Usuario no encontrado"
+    
+    elif request.method == 'GET':
+        contrato = request.GET.get('contrato')
+        if contrato:
+            try:
+                usuario = UserAcueducto.objects.get(contrato=contrato)
+                historico = usuario.lecturas.all()[:6]  # Obtener las últimas 6 lecturas
+            except UserAcueducto.DoesNotExist:
+                mensaje = "Usuario no encontrado"
+    
+    return render(request, 'toma_lectura.html', {
+        'mensaje': mensaje,
+        'usuario': usuario,
+        'historico': historico
+    })
+
+def historico_lecturas(request, contrato):
+    usuario = get_object_or_404(UserAcueducto, contrato=contrato)
+    historico = list(usuario.lecturas.all().order_by('-fecha_lectura'))
+    
+    return render(request, 'historico_lecturas.html', {
+        'usuario': usuario,
+        'historico': historico
     })
 
 

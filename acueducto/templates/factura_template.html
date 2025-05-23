@@ -1,6 +1,9 @@
+{% load static %}
+{% load acueducto_filters %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    {% comment %}Asegurando que los archivos estáticos se cargan correctamente{% endcomment %}
     <meta charset="UTF-8">
     <title>Factura - {{ usuario.contrato }}</title>
     <style>
@@ -16,10 +19,36 @@
         .header {
             text-align: center;
             margin-bottom: 30px;
+            position: relative;
+            padding-top: 20px;
         }
-        .header h1 {
+        .logo {
+            width: 120px;
+            height: auto;
+            position: absolute;
+            top: 10px;data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAAACXBIWXMAAAsTAAALEwEAmpwYAAAF0WlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4gPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgNy4yLWMwMDAgNzkuMWI2NWE3OWI0LCAyMDIyLzA2LzE0LTIyOjA0OjE3ICAgICAgICAiPiA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPiA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtbG5zOnhtcE1NPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvbW0vIiB4bWxuczpzdEV2dD0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL3NUeXBlL1Jlc291cmNlRXZlbnQjIiB4b
+            left: 10px;
+            object-fit: contain;
+            max-height: 80px;
+        }
+        .header-content {
+            margin-left: 170px; /* espacio para el logo */
+            text-align: left;
+        }
+        .empresa-info {
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .factura-titulo {
             color: #333;
+            margin: 0;
+            font-size: 24px;
             margin-bottom: 10px;
+        }
+        .factura-numero {
+            color: #666;
+            font-size: 16px;
+            margin-bottom: 5px;
         }
         .info-cliente {
             margin-bottom: 30px;
@@ -42,6 +71,17 @@
         .detalles th {
             background-color: #f5f5f5;
         }
+        .detalles td.lecturas {
+            padding: 15px;
+            line-height: 1.6;
+        }
+        .lectura-info {
+            margin-bottom: 5px;
+        }
+        .consumo-destacado {
+            color: #4CAF50;
+            font-weight: bold;
+        }
         .total {
             text-align: right;
             font-size: 18px;
@@ -53,19 +93,46 @@
             color: #666;
             font-size: 12px;
         }
+        .grafico-container {
+            margin: 30px 0;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+        }
+        .grafico-container h2 {
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 18px;
+        }
+        #graficoConsumo {
+            max-width: 600px;
+            margin: 0 auto;
+            height: 300px;
+        }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="factura">
         <div class="header">
-            <h1>Factura del Acueducto</h1>
-            <p>Fecha: {{ usuario.date|date:"d/m/Y" }}</p>
+            <img src="images/logo1.webp" alt="Logo Acueducto" class="logo">
+            <div class="header-content">
+                <div class="empresa-info">
+                    <h1 class="factura-titulo">Factura del Acueducto</h1>
+                    <p class="factura-numero">Factura N°: {{ usuario.contrato }}-{{ usuario.date|date:"Ymd" }}</p>
+                    <p>Fecha de Emisión: {{ usuario.date|date:"d/m/Y" }}</p>
+                </div>
+            </div>
         </div>
 
         <div class="info-cliente">
             <h2>Información del Cliente</h2>
             <p><strong>Contrato:</strong> {{ usuario.contrato }}</p>
             <p><strong>Nombre:</strong> {{ usuario.name }} {{ usuario.lastname }}</p>
+            {% if historico_lecturas.0 %}
+            <p><strong>Fecha última lectura:</strong> {{ historico_lecturas.0.fecha_lectura|date:"d/m/Y" }}</p>
+            {% endif %}
             <p><strong>Dirección:</strong> {{ usuario.address }}</p>
             <p><strong>Email:</strong> {{ usuario.email }}</p>
             <p><strong>Teléfono:</strong> {{ usuario.phone }}</p>
@@ -83,11 +150,24 @@
             <tbody>
                 <tr>
                     <td>Consumo de Agua</td>
-                    <td>{{ usuario.lectura }}</td>
+                    <td class="lecturas">
+                        <div class="lectura-info">
+                            <strong>Lectura Actual:</strong> {{ usuario.lectura }} m³
+                            <small>({{ historico_lecturas.0.fecha_lectura|date:"d/m/Y" }})</small>
+                        </div>
+                        {% if lectura_anterior %}
+                        <div class="lectura-info">
+                            <strong>Lectura Anterior:</strong> {{ lectura_anterior.lectura }} m³
+                            <small>({{ lectura_anterior.fecha_lectura|date:"d/m/Y" }})</small>
+                        </div>
+                        <div class="lectura-info consumo-destacado">
+                            <strong>Consumo:</strong> {{ usuario.lectura|sub:lectura_anterior.lectura|floatformat:3 }} m³
+                        </div>
+                        {% endif %}
+                    </td>
                     <td>$1.000 por unidad</td>
                     <td>${{ usuario.lectura|floatformat:3|default:"0" }}</td>
                 </tr>
-                <!-- Aquí puedes añadir más conceptos si es necesario -->
             </tbody>
         </table>
 
@@ -95,10 +175,87 @@
             Total a Pagar: ${{ usuario.lectura|floatformat:3|default:"0" }}
         </div>
 
+        <div class="grafico-container">
+            <h2>Estadística de Consumo</h2>
+            <canvas id="graficoConsumo"></canvas>
+        </div>
+
         <div class="footer">
             <p>Esta factura es un documento válido para efectos fiscales.</p>
             <p>Para cualquier consulta, comuníquese al teléfono: (315) 243-358</p>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var ctx = document.getElementById('graficoConsumo').getContext('2d');
+            
+            var labels = [
+                {% for lectura in historico_lecturas %}
+                    '{{ lectura.fecha_lectura|date:"d/m/Y" }}',
+                {% endfor %}
+            ];
+            
+            var lecturas = [
+                {% for lectura in historico_lecturas %}
+                    {{ lectura.lectura }},
+                {% endfor %}
+            ];
+            
+            var data = {
+                labels: labels,
+                datasets: [{
+                    label: 'Consumo Mensual (m³)',
+                    data: lecturas,
+                    backgroundColor: [
+                        'rgba(54, 162, 235, 0.5)',
+                        'rgba(75, 192, 192, 0.5)',
+                        'rgba(153, 102, 255, 0.5)',
+                        'rgba(255, 159, 64, 0.5)',
+                        'rgba(255, 99, 132, 0.5)',
+                        'rgba(46, 204, 113, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)',
+                        'rgba(255, 159, 64, 1)',
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(46, 204, 113, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            };
+
+            var options = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Histórico de Consumo de Agua'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Consumo (m³)'
+                        }
+                    }
+                }
+            };
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: data,
+                options: options
+            });
+        });
+    </script>
 </body>
 </html>

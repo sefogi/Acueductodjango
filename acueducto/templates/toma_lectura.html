@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toma de Lectura</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        h1 {
+            color: #333;
+            margin: 0;
+        }
+        .user-info {
+            text-align: right;
+        }
+        .user-info span {
+            display: block;
+            margin-bottom: 5px;
+            color: #666;
+        }
+        .logout-btn {
+            display: inline-block;
+            padding: 8px 16px;
+            background-color: #dc3545;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .logout-btn:hover {
+            background-color: #c82333;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #666;
+        }
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .mensaje {
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .mensaje.exito {
+            background-color: #dff0d8;
+            color: #3c763d;
+            border: 1px solid #d6e9c6;
+        }
+        .mensaje.error {
+            background-color: #f2dede;
+            color: #a94442;
+            border: 1px solid #ebccd1;
+        }
+        .info-usuario {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .historico {
+            margin-top: 30px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f5f5f5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-container">
+            <h1>Toma de Lectura</h1>
+            <div class="user-info">
+                <span>Bienvenido, {{ request.user.username }}</span>
+                <a href="{% url 'logout' %}" class="logout-btn">Cerrar Sesión</a>
+            </div>
+        </div>
+        
+        {% if mensaje %}
+        <div class="mensaje {% if 'exitosamente' in mensaje %}exito{% else %}error{% endif %}">
+            {{ mensaje }}
+        </div>
+        {% endif %}
+
+        <form method="GET" action="{% url 'toma_lectura' %}" class="form-group">
+            <label for="contrato">Buscar por Número de Contrato:</label>
+            <input type="text" id="contrato" name="contrato" required>
+            <button type="submit">Buscar</button>
+        </form>
+
+        {% if usuario %}
+        <div class="info-usuario">
+            <h3>Información del Usuario</h3>
+            <p><strong>Contrato:</strong> {{ usuario.contrato }}</p>
+            <p><strong>Nombre:</strong> {{ usuario.name }} {{ usuario.lastname }}</p>
+            <p><strong>Dirección:</strong> {{ usuario.address }}</p>
+            <p><strong>Última lectura:</strong> {{ usuario.lectura|default:"Sin lectura" }}</p>
+        </div>
+
+        <form method="POST" action="{% url 'toma_lectura' %}">
+            {% csrf_token %}
+            <input type="hidden" name="contrato" value="{{ usuario.contrato }}">
+            <div class="form-group">
+                <label for="lectura">Nueva Lectura:</label>
+                <input type="number" id="lectura" name="lectura" step="0.001" required>
+            </div>
+            <button type="submit">Registrar Lectura</button>
+        </form>
+
+        {% if historico %}
+        <div class="historico">
+            <h3>Histórico de Lecturas</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Lectura</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lectura in historico %}
+                    <tr>
+                        <td>{{ lectura.fecha_lectura|date:"d/m/Y" }}</td>
+                        <td>{{ lectura.lectura }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+        {% endif %}
+    </div>
+</body>
+</html>

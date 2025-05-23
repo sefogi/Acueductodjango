@@ -14,6 +14,18 @@ class UserAcueducto(models.Model):
     def __str__(self):
         return f"{self.name} {self.lastname} - {self.contrato}"
 
+class HistoricoLectura(models.Model):
+    usuario = models.ForeignKey(UserAcueducto, on_delete=models.CASCADE, related_name='lecturas')
+    fecha_lectura = models.DateField()
+    lectura = models.FloatField()
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-fecha_lectura']
+        
+    def __str__(self):
+        return f"Lectura {self.usuario.contrato} - {self.fecha_lectura}"
+
 
 
 
