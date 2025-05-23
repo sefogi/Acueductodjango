@@ -455,3 +455,28 @@ body {
 .modificar-form .submit-btn:active {
     transform: translateY(0);
 }
+
+.periodo-facturacion {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 15px;
+}
+
+.fecha-inicio, .fecha-fin {
+    flex: 1;
+}
+
+.fecha-inicio label, .fecha-fin label {
+    display: block;
+    margin-bottom: 5px;
+    color: #666;
+    font-size: 14px;
+}
+
+.periodo-facturacion input[type="date"] {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}

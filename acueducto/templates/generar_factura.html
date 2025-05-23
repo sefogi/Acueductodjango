@@ -30,6 +30,27 @@
         <div class="form-container">
             <form method="POST" class="factura-form">
                 {% csrf_token %}
+                <div class="form-group">
+                    <label>Período de Facturación para Todas las Facturas:</label>
+                    <div class="periodo-facturacion">
+                        <div class="fecha-inicio">
+                            <label for="periodo_inicio_todas">Desde:</label>
+                            <input type="date" 
+                                   id="periodo_inicio_todas" 
+                                   name="periodo_inicio_todas" 
+                                   required 
+                                   class="form-control">
+                        </div>
+                        <div class="fecha-fin">
+                            <label for="periodo_fin_todas">Hasta:</label>
+                            <input type="date" 
+                                   id="periodo_fin_todas" 
+                                   name="periodo_fin_todas" 
+                                   required 
+                                   class="form-control">
+                        </div>
+                    </div>
+                </div>
                 <button type="submit" name="generar_todas" class="submit-btn generate-all">
                     Generar Facturas de Todos los Usuarios
                 </button>
@@ -66,8 +87,30 @@
                            id="fecha_emision" 
                            name="fecha_emision" 
                            required 
-                           value="{{ fecha_actual|date:'Y-m-d' }}"
+                           value="{% now 'Y-m-d' %}"
                            class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label>Período de Facturación:</label>
+                    <div class="periodo-facturacion">
+                        <div class="fecha-inicio">
+                            <label for="periodo_inicio">Desde:</label>
+                            <input type="date" 
+                                   id="periodo_inicio" 
+                                   name="periodo_inicio" 
+                                   required 
+                                   class="form-control">
+                        </div>
+                        <div class="fecha-fin">
+                            <label for="periodo_fin">Hasta:</label>
+                            <input type="date" 
+                                   id="periodo_fin" 
+                                   name="periodo_fin" 
+                                   required 
+                                   class="form-control">
+                        </div>
+                    </div>
                 </div>
 
                 <div class="form-actions">
@@ -122,6 +165,25 @@
                     }
                 });
             }
+
+            // Establecer fechas por defecto para el período de facturación
+            const today = new Date();
+            const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+            // Formatear fechas para el input type="date"
+            const formatDate = (date) => {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+
+            // Establecer valores por defecto
+            document.getElementById('periodo_inicio_todas').value = formatDate(firstDayOfMonth);
+            document.getElementById('periodo_fin_todas').value = formatDate(lastDayOfMonth);
+            document.getElementById('periodo_inicio').value = formatDate(firstDayOfMonth);
+            document.getElementById('periodo_fin').value = formatDate(lastDayOfMonth);
         });
     </script>
 </body>

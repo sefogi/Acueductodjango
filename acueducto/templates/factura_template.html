@@ -1,5 +1,6 @@
 {% load static %}
 {% load acueducto_filters %}
+{% load fecha_espanol %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -121,7 +122,8 @@
                 <div class="empresa-info">
                     <h1 class="factura-titulo">Factura del Acueducto</h1>
                     <p class="factura-numero">Factura N°: {{ usuario.contrato }}-{{ fecha_emision|date:"Ymd" }}</p>
-                    <p>Fecha de Emisión: {{ fecha_emision|date:"d/m/Y" }}</p>
+                    <p>Fecha de Emisión: {{ fecha_emision|fecha_espanol }}</p>
+                    <p class="periodo-facturacion"><strong>Período de Facturación:</strong><br>{{ periodo_facturacion }}</p>
                 </div>
             </div>
         </div>

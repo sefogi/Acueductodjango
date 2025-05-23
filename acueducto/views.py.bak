@@ -4,7 +4,33 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 from .models import UserAcueducto, HistoricoLectura
 from django.db.models import Q
-from django.template.loader import get_template
+from django.template.loader import render_to_string, get_template
+from django.http import HttpResponse, JsonResponse
+from django.core.mail import EmailMessage
+from django.conf import settings
+from weasyprint import HTML
+from datetime import datetime, timedelta
+import tempfile
+import os
+from io import BytesIO
+import zipfile
+from .utils import formatear_fecha_espanolth.deco                # Obtener las fechas del período de facturación del formulario
+                periodo_inicio = request.POST.get('periodo_inicio_todas')
+                periodo_fin = request.POST.get('periodo_fin_todas')
+                
+                if not periodo_inicio or not periodo_fin:
+                    messages.error(request, 'Por favor, especifique el período de facturación')
+                    return redirect('generar_factura')
+                
+                # Formatear el período de facturación
+                periodo_inicio_fecha = datetime.strptime(periodo_inicio, '%Y-%m-%d')
+                periodo_fin_fecha = datetime.strptime(periodo_fin, '%Y-%m-%d')
+                periodo_facturacion = f"Del {formatear_fecha_espanol(periodo_inicio_fecha)} al {formatear_fecha_espanol(periodo_fin_fecha)}"t login_required
+from django.contrib.auth import authenticate, login, logout
+from django.contrib import messages
+from .models import UserAcueducto, HistoricoLectura
+from django.db.models import Q
+from django.template.loader import render_to_string, get_template
 from django.http import HttpResponse, JsonResponse
 from django.core.mail import EmailMessage
 from django.conf import settings
@@ -15,10 +41,37 @@ import os
 from io import BytesIO
 import zipfile
 from .utils import formatear_fecha_espanol
+from django.template.loader import get_template
+from datetime import datetime, timedelta
+import tempfile
+import os
+from io import BytesIO
+import zipfile
+from .utils import formatear_fecha_espanol
+
+
+def obtener_mes_espanol(numero_mes):
+    meses = {
+        1: 'enero',
+        2: 'febrero',
+        3: 'marzo',
+        4: 'abril',
+        5: 'mayo',
+        6: 'junio',
+        7: 'julio',
+        8: 'agosto',
+        9: 'septiembre',
+        10: 'octubre',
+        11: 'noviembre',
+        12: 'diciembre'
+    }
+    return meses[numero_mes]
+
 
 # Create your views here.
 def index(request):
     usuario_creado = None
+
     if request.method == 'POST':
         try:
             usuario_creado = UserAcueducto.objects.create(
@@ -34,20 +87,25 @@ def index(request):
             messages.success(request, 'Usuario creado exitosamente')
         except Exception as e:
             messages.error(request, f'Error al crear usuario: {str(e)}')
+
     return render(request, 'index.html', {'usuario_creado': usuario_creado})
+
 
 def lista_usuarios(request):
     busqueda = request.GET.get('busqueda', '')
     usuarios = UserAcueducto.objects.all()
+
     if busqueda:
         usuarios = usuarios.filter(
             Q(contrato__icontains=busqueda) |
             Q(address__icontains=busqueda)
         )
+
     return render(request, 'lista_usuarios.html', {
         'usuarios': usuarios,
         'busqueda': busqueda
     })
+
 
 def generar_factura(request):
     contrato_preseleccionado = request.GET.get('contrato', '')
@@ -55,69 +113,67 @@ def generar_factura(request):
     
     if request.method == 'POST':
         if 'generar_todas' in request.POST:
+            # Generar ZIP con todas las facturas
+            zip_buffer = BytesIO()
+            fecha_actual = datetime.now()
+
             try:
-                zip_buffer = BytesIO()
-                
-                # Obtener las fechas del período de facturación del formulario
-                periodo_inicio = request.POST.get('periodo_inicio_todas')
-                periodo_fin = request.POST.get('periodo_fin_todas')
-                
-                if not periodo_inicio or not periodo_fin:
-                    messages.error(request, 'Por favor, especifique el período de facturación')
-                    return redirect('generar_factura')
-                
-                # Formatear el período de facturación
-                periodo_inicio_fecha = datetime.strptime(periodo_inicio, '%Y-%m-%d')
-                periodo_fin_fecha = datetime.strptime(periodo_fin, '%Y-%m-%d')
-                periodo_facturacion = f"Del {formatear_fecha_espanol(periodo_inicio_fecha)} al {formatear_fecha_espanol(periodo_fin_fecha)}"
-                
-                with zipfile.ZipFile(zip_buffer, 'w') as zip_file:
-                    for usuario in UserAcueducto.objects.all():
-                        try:
-                            # Obtener histórico de lecturas
-                            historico_lecturas = usuario.lecturas.all().order_by('-fecha_lectura')[:6]
-                            lectura_anterior = None
-                            if len(historico_lecturas) > 1:
-                                lectura_anterior = historico_lecturas[1]
-                            
-                            # Generar PDF
-                            template = get_template('factura_template.html')
-                            context = {
-                                'usuario': usuario,
-                                'historico_lecturas': historico_lecturas,
-                                'lectura_anterior': lectura_anterior,
-                                'fecha_emision': fecha_actual,
-                                'periodo_facturacion': periodo_facturacion,
-                            }
-                            html = template.render(context)
-                            
-                            pdf_buffer = BytesIO()
-                            HTML(string=html).write_pdf(pdf_buffer)
-                            
-                            # Añadir al ZIP
-                            zip_file.writestr(
-                                f'factura_{usuario.contrato}.pdf',
-                                pdf_buffer.getvalue()
-                            )
-                        except Exception as e:
-                            messages.error(request, f'Error al generar factura para {usuario.contrato}: {str(e)}')
-                
-                response = HttpResponse(zip_buffer.getvalue(), content_type='application/zip')
-                response['Content-Disposition'] = 'attachment; filename="todas_las_facturas.zip"'
-                return response
-            except Exception as e:
-                messages.error(request, f'Error al generar las facturas: {str(e)}')
-                return redirect('generar_factura')
+            # Generar ZIP con todas las facturas
+            zip_buffer = BytesIO()
+            fecha_actual = datetime.now()
+            
+            # Obtener las fechas del período de facturación del formulario
+            periodo_inicio = request.POST.get('periodo_inicio_todas')
+            periodo_fin = request.POST.get('periodo_fin_todas')
+            
+            # Formatear el período de facturación
+            periodo_inicio_fecha = datetime.strptime(periodo_inicio, '%Y-%m-%d')
+            periodo_fin_fecha = datetime.strptime(periodo_fin, '%Y-%m-%d')
+            periodo_facturacion = f"Del {formatear_fecha_espanol(periodo_inicio_fecha)} al {formatear_fecha_espanol(periodo_fin_fecha)}"
+            
+            with zipfile.ZipFile(zip_buffer, 'w') as zip_file:
+                for usuario in UserAcueducto.objects.all():
+                    try:
+                        # Generar PDF para cada usuario
+                        template = get_template('factura_template.html')
+                        
+                        # Obtener el histórico de lecturas
+                        historico_lecturas = usuario.lecturas.all().order_by('-fecha_lectura')[:6]
+                        lectura_anterior = None
+                        if len(historico_lecturas) > 1:
+                            lectura_anterior = historico_lecturas[1]
+                        
+                        context = {
+                            'usuario': usuario,
+                            'historico_lecturas': historico_lecturas,
+                            'lectura_anterior': lectura_anterior,
+                            'fecha_emision': fecha_actual,
+                            'periodo_facturacion': periodo_facturacion,
+                        }
+                        html = template.render(context)
+                        
+                        pdf_buffer = BytesIO()
+                        HTML(string=html).write_pdf(pdf_buffer)
+                        
+                        # Añadir PDF al ZIP
+                        zip_file.writestr(
+                            f'factura_{usuario.contrato}.pdf',
+                            pdf_buffer.getvalue()
+                        )
+                    except Exception as e:
+                        messages.error(request, f'Error al generar factura para {usuario.contrato}: {str(e)}')
+            
+            # Devolver el archivo ZIP
+            response = HttpResponse(zip_buffer.getvalue(), content_type='application/zip')
+            response['Content-Disposition'] = 'attachment; filename="todas_las_facturas.zip"'
+            return response
+        
         else:
-            # Generar factura individual
+            # Código para generar factura individual
             contrato = request.POST.get('contrato')
             fecha_emision = request.POST.get('fecha_emision')
             periodo_inicio = request.POST.get('periodo_inicio')
             periodo_fin = request.POST.get('periodo_fin')
-            
-            if not periodo_inicio or not periodo_fin:
-                messages.error(request, 'Por favor, especifique el período de facturación')
-                return redirect('generar_factura')
             
             # Formatear el período de facturación
             periodo_inicio_fecha = datetime.strptime(periodo_inicio, '%Y-%m-%d')
@@ -127,11 +183,15 @@ def generar_factura(request):
             if not fecha_emision:
                 fecha_emision = fecha_actual
             else:
+                # Convertir la fecha de string a objeto datetime
                 fecha_emision = datetime.strptime(fecha_emision, '%Y-%m-%d')
             
             usuario = get_object_or_404(UserAcueducto, contrato=contrato)
+            
+            # Obtener el histórico de lecturas ordenado por fecha
             historico_lecturas = usuario.lecturas.all().order_by('-fecha_lectura')[:6]
             
+            # Obtener la lectura anterior si existe
             lectura_anterior = None
             if len(historico_lecturas) > 1:
                 lectura_anterior = historico_lecturas[1]
@@ -153,34 +213,40 @@ def generar_factura(request):
                 HTML(string=html, base_url=str(base_url)).write_pdf(pdf_file.name)
                 
                 if 'enviar_email' in request.POST:
-                    email = EmailMessage(
-                        'Factura del Acueducto',
-                        'Adjunto encontrará su factura.',
-                        settings.DEFAULT_FROM_EMAIL,
-                        [usuario.email]
-                    )
-                    email.attach_file(pdf_file.name)
-                    email.send()
-                    messages.success(request, 'Factura enviada por correo exitosamente')
-                    return redirect('generar_factura')
+                    try:
+                        email = EmailMessage(
+                            'Factura del Acueducto',
+                            'Adjunto encontrará su factura.',
+                            settings.DEFAULT_FROM_EMAIL,
+                            [usuario.email]
+                        )
+                        email.attach_file(pdf_file.name)
+                        email.send()
+                        messages.success(request, 'Factura enviada por correo exitosamente')
+                        return redirect('generar_factura')
+                    except Exception as e:
+                        messages.error(request, f'Error al enviar el correo: {str(e)}')
+                        return redirect('generar_factura')
                 
                 with open(pdf_file.name, 'rb') as pdf:
                     response = HttpResponse(pdf.read(), content_type='application/pdf')
                     response['Content-Disposition'] = f'inline; filename="factura_{usuario.contrato}.pdf"'
                     return response
+                    
             except Exception as e:
                 messages.error(request, f'Error al generar la factura: {str(e)}')
                 return redirect('generar_factura')
             finally:
                 if pdf_file and os.path.exists(pdf_file.name):
                     os.unlink(pdf_file.name)
-    
+                    
     usuarios = UserAcueducto.objects.all().order_by('contrato')
     busqueda_contrato = request.GET.get('busqueda_contrato', '')
     
+    # Si hay una búsqueda de contrato, filtramos los usuarios
     if busqueda_contrato:
         usuarios = usuarios.filter(contrato__icontains=busqueda_contrato)
-    
+        
     return render(request, 'generar_factura.html', {
         'usuarios': usuarios,
         'contrato_preseleccionado': contrato_preseleccionado,
@@ -207,11 +273,13 @@ def login_view(request):
         username = request.POST.get('username')
         password = request.POST.get('password')
         user = authenticate(request, username=username, password=password)
+        
         if user is not None:
             login(request, user)
             return redirect('toma_lectura')
         else:
             messages.error(request, 'Usuario o contraseña incorrectos')
+    
     return render(request, 'login.html')
 
 def logout_view(request):
@@ -227,6 +295,7 @@ def toma_lectura(request):
     if request.method == 'POST':
         contrato = request.POST.get('contrato')
         nueva_lectura = request.POST.get('lectura')
+        
         try:
             usuario = UserAcueducto.objects.get(contrato=contrato)
             from django.utils import timezone
@@ -244,7 +313,8 @@ def toma_lectura(request):
             usuario.save()
             
             mensaje = "Lectura registrada exitosamente"
-            historico = usuario.lecturas.all()[:6]
+            historico = usuario.lecturas.all()[:6]  # Obtener las últimas 6 lecturas
+            
         except UserAcueducto.DoesNotExist:
             mensaje = "Usuario no encontrado"
     
@@ -253,7 +323,7 @@ def toma_lectura(request):
         if contrato:
             try:
                 usuario = UserAcueducto.objects.get(contrato=contrato)
-                historico = usuario.lecturas.all()[:6]
+                historico = usuario.lecturas.all()[:6]  # Obtener las últimas 6 lecturas
             except UserAcueducto.DoesNotExist:
                 mensaje = "Usuario no encontrado"
     
@@ -266,6 +336,7 @@ def toma_lectura(request):
 def historico_lecturas(request, contrato):
     usuario = get_object_or_404(UserAcueducto, contrato=contrato)
     historico = list(usuario.lecturas.all().order_by('-fecha_lectura'))
+    
     return render(request, 'historico_lecturas.html', {
         'usuario': usuario,
         'historico': historico
