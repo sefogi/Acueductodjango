@@ -17,24 +17,30 @@
             max-width: 800px;
             margin: 0 auto;
         }
-        .header {
-            text-align: center;
+        .header-table {
+            width: 100%;
             margin-bottom: 30px;
-            position: relative;
-            padding-top: 20px;
+            border-collapse: collapse;
+        }
+        .header-table th, .header-table td {
+            padding: 10px;
+            vertical-align: top;
+        }
+        .logo-cell {
+            width: 25%;
+        }
+        .info-cell {
+            width: 50%;
+            text-align: center;
+        }
+        .contrato-cell {
+            width: 25%;
+            text-align: right;
         }
         .logo {
             width: 120px;
             height: auto;
-            position: absolute;
-            top: 10px;data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAAACXBIWXMAAAsTAAALEwEAmpwYAAAF0WlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4gPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgNy4yLWMwMDAgNzkuMWI2NWE3OWI0LCAyMDIyLzA2LzE0LTIyOjA0OjE3ICAgICAgICAiPiA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPiA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtbG5zOnhtcE1NPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvbW0vIiB4bWxuczpzdEV2dD0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL3NUeXBlL1Jlc291cmNlRXZlbnQjIiB4b
-            left: 10px;
             object-fit: contain;
-            max-height: 80px;
-        }
-        .header-content {
-            margin-left: 170px; /* espacio para el logo */
-            text-align: left;
         }
         .empresa-info {
             margin-bottom: 20px;
@@ -50,6 +56,13 @@
             color: #666;
             font-size: 16px;
             margin-bottom: 5px;
+        }
+        .contrato-info {
+            font-size: 16px;
+            color: #333;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-radius: 5px;
         }
         .info-cliente {
             margin-bottom: 30px;
@@ -116,22 +129,43 @@
 </head>
 <body>
     <div class="factura">
-        <div class="header">
-            <img src="images/logo1.webp" alt="Logo Acueducto" class="logo">
-            <div class="header-content">
-                <div class="empresa-info">
-                    <h1 class="factura-titulo">Factura del Acueducto</h1>
-                    <p class="factura-numero">Factura N°: {{ usuario.contrato }}-{{ fecha_emision|date:"Ymd" }}</p>
-                    <p>Fecha de Emisión: {{ fecha_emision|fecha_espanol }}</p>
-                    <p class="periodo-facturacion"><strong>Período de Facturación:</strong><br>{{ periodo_facturacion }}</p>
-                </div>
-            </div>
-        </div>
+        <table class="header-table" aria-label="Encabezado de factura">
+            <thead>
+                <tr>
+                    <th scope="col"></th>
+                    <th scope="col"></th>
+                    <th scope="col"></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="logo-cell">
+                        <img src="images/logo1.webp" alt="Logo Acueducto" class="logo">
+                    </td>
+                    <td class="info-cell">
+                        <div class="empresa-info">
+                            <h1 class="factura-titulo">Factura del Acueducto</h1>
+                            <p class="factura-numero">Factura N°: {{ usuario.contrato }}-{{ fecha_emision|date:"Ymd" }}</p>
+                            <p>Fecha de Emisión: {{ fecha_emision|fecha_espanol }}</p>
+                            <p class="periodo-facturacion"><strong>Período de Facturación:</strong><br>{{ periodo_facturacion }}</p>
+                        </div>
+                    </td>
+                    <td class="contrato-cell">
+                        <div class="contrato-info">
+                            <strong>N° de Contrato</strong><br>
+                            {{ usuario.contrato }}
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
 
         <div class="info-cliente">
             <h2>Información del Cliente</h2>
             <p><strong>Contrato:</strong> {{ usuario.contrato }}</p>
             <p><strong>Nombre:</strong> {{ usuario.name }} {{ usuario.lastname }}</p>
+            <p><strong>Categoría:</strong> {{ usuario.get_categoria_display }}</p>
+            <p><strong>Zona:</strong> {{ usuario.zona }}</p>
             {% if historico_lecturas.0 %}
             <p><strong>Fecha última lectura:</strong> {{ historico_lecturas.0.fecha_lectura|date:"d/m/Y" }}</p>
             {% endif %}

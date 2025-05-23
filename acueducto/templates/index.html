@@ -14,6 +14,7 @@
             <a href="{% url 'modificar_usuario' %}">Modificar Usuario</a>
             <a href="{% url 'lista_usuarios' %}">Lista de Usuarios</a>
             <a href="{% url 'generar_factura' %}">Generar Factura</a>
+            <a href="{% url 'toma_lectura' %}">Toma de Lecturas</a>
         </nav>
 
         <h1>Crear Nuevo Usuario</h1>
@@ -63,6 +64,17 @@
                     <label for="lectura">Lectura:</label>
                     <input type="number" step="0.01" id="lectura" name="lectura">
                 </div>
+                <div class="form-group">
+                    <label for="categoria">Categoría:</label>
+                    <select id="categoria" name="categoria" required>
+                        <option value="residencial">Residencial</option>
+                        <option value="comercial">Comercial</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="zona">Zona:</label>
+                    <input type="text" id="zona" name="zona" required>
+                </div>
                 <button type="submit" class="submit-btn">Crear Usuario</button>
             </form>
         </div>
@@ -80,6 +92,8 @@
                         <th>Email</th>
                         <th>Teléfono</th>
                         <th>Dirección</th>
+                        <th>Categoría</th>
+                        <th>Zona</th>
                         <th>Lectura</th>
                     </tr>
                 </thead>
@@ -92,6 +106,8 @@
                         <td>{{ usuario_creado.email }}</td>
                         <td>{{ usuario_creado.phone }}</td>
                         <td>{{ usuario_creado.address }}</td>
+                        <td>{{ usuario_creado.get_categoria_display }}</td>
+                        <td>{{ usuario_creado.zona }}</td>
                         <td>{{ usuario_creado.lectura }}</td>
                     </tr>
                 </tbody>
@@ -108,6 +124,6 @@
         {% endif %}
     </div>
 
-    <script src="{% static 'script.js' %}"></script>
+    <script src="{% static 'scripts.js' %}"></script>
 </body>
 </html>

@@ -14,6 +14,7 @@
             <a href="{% url 'modificar_usuario' %}" class="active">Modificar Usuario</a>
             <a href="{% url 'lista_usuarios' %}">Lista de Usuarios</a>
             <a href="{% url 'generar_factura' %}">Generar Factura</a>
+            <a href="{% url 'toma_lectura' %}">Toma de Lecturas</a>
         </nav>
 
         <h1>Modificar Usuario</h1>
@@ -87,6 +88,34 @@
                            id="phone" 
                            name="phone" 
                            value="{{ usuario.phone }}"
+                           class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label for="categoria">Categoría:</label>
+                    <select id="categoria" name="categoria" required class="form-control">
+                        <option value="residencial" {% if usuario.categoria == 'residencial' %}selected{% endif %}>Residencial</option>
+                        <option value="comercial" {% if usuario.categoria == 'comercial' %}selected{% endif %}>Comercial</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="zona">Zona:</label>
+                    <input type="text" 
+                           id="zona" 
+                           name="zona" 
+                           value="{{ usuario.zona }}"
+                           required 
+                           class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label for="address">Dirección:</label>
+                    <input type="text" 
+                           id="address" 
+                           name="address" 
+                           value="{{ usuario.address }}"
+                           required 
                            class="form-control">
                 </div>
 

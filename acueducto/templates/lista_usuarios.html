@@ -11,11 +11,39 @@
     <div class="container">
         <nav class="nav-menu">
             <a href="{% url 'index' %}">Crear Usuario</a>
+            <a href="{% url 'modificar_usuario' %}">Modificar Usuario</a>
             <a href="{% url 'lista_usuarios' %}" class="active">Lista de Usuarios</a>
+            <a href="{% url 'generar_factura' %}">Generar Factura</a>
+            <a href="{% url 'toma_lectura' %}">Toma de Lecturas</a>
         </nav>
 
         <h1>Lista de Usuarios del Acueducto</h1>
         
+        {% if rutas_activas %}
+        <div class="rutas-info">
+            <h2>Estado de Rutas</h2>
+            {% for ruta in rutas_activas %}
+            <div class="ruta-estado {% if ruta.activa %}ruta-activa{% else %}ruta-finalizada fade-out{% endif %}" 
+                 id="ruta-{{ ruta.id }}"
+                 {% if not ruta.activa %}data-fecha-finalizacion="{{ ruta.fecha_finalizacion|date:'Y-m-d H:i:s' }}"{% endif %}>
+                <h3>{{ ruta.nombre }}</h3>
+                <div class="ruta-detalles">
+                    <div class="estado-badge {% if ruta.activa %}activa{% else %}finalizada{% endif %}">
+                        {{ ruta.activa|yesno:"En Progreso,Finalizada" }}
+                    </div>
+                    <div class="progreso-ruta">
+                        <div class="progreso-barra" style="width: {{ ruta.porcentaje_completado }}%"></div>
+                    </div>
+                    <p class="progreso-texto">Progreso: {{ ruta.porcentaje_completado }}%</p>
+                    {% if ruta.fecha_finalizacion %}
+                    <p class="fecha-finalizacion">Finalizada: {{ ruta.fecha_finalizacion|date:"d/m/Y H:i" }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
         <div class="search-container">
             <form method="GET" class="search-form">
                 <input 
@@ -38,6 +66,8 @@
                     <th>Email</th>
                     <th>Teléfono</th>
                     <th>Dirección</th>
+                    <th>Categoría</th>
+                    <th>Zona</th>
                     <th>Última Lectura</th>
                     <th>Acciones</th>
                 </tr>
@@ -52,20 +82,142 @@
                     <td>{{ usuario.email }}</td>
                     <td>{{ usuario.phone }}</td>
                     <td>{{ usuario.address }}</td>
+                    <td>{{ usuario.get_categoria_display }}</td>
+                    <td>{{ usuario.zona }}</td>
                     <td>{{ usuario.lectura }}</td>
-                    <td>
+                    <td class="actions">
                         <a href="{% url 'historico_lecturas' usuario.contrato %}" class="btn-historico">Ver Histórico</a>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="9">No se encontraron usuarios.</td>
+                    <td colspan="11">No se encontraron usuarios.</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
+
+        <div class="ruta-container">
+            <h2>Generar Ruta de Lecturas</h2>
+            <form method="POST" class="ruta-form" id="rutaForm">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="nombre_ruta">Nombre de la Ruta:</label>
+                    <input type="text" id="nombre_ruta" name="nombre_ruta" required class="form-control">
+                </div>
+                <div class="usuarios-seleccion">
+                    <h3>Seleccionar Usuarios para la Ruta</h3>
+                    <div class="usuarios-lista" id="usuariosLista">
+                        {% for usuario in usuarios %}
+                        <div class="usuario-item" draggable="true" data-id="{{ usuario.id }}">
+                            <input type="checkbox" name="usuarios_seleccionados" value="{{ usuario.id }}">
+                            <span class="usuario-info">
+                                {{ usuario.address }} - Contrato: {{ usuario.contrato }}
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <button type="submit" name="generar_ruta" class="submit-btn">Generar Ruta</button>
+            </form>
+        </div>
+
+        <div class="rutas-activas">
+            <h2>Rutas Activas</h2>
+            {% if rutas_activas %}
+            <div class="rutas-lista">
+                {% for ruta in rutas_activas %}
+                <div class="ruta-item">
+                    <h3>{{ ruta.nombre }}</h3>
+                    <p>Fecha: {{ ruta.fecha_creacion|date:"d/m/Y" }}</p>
+                    <ul>
+                        {% for orden in ruta.ordenruta_set.all %}
+                        <li {% if orden.lectura_tomada %}class="lectura-tomada"{% endif %}>
+                            {{ orden.usuario.address }} - {{ orden.usuario.contrato }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p>No hay rutas activas</p>
+            {% endif %}
+        </div>
     </div>
 
-    <script src="{% static 'script.js' %}"></script>
+    <script src="{% static 'scripts.js' %}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const usuariosLista = document.getElementById('usuariosLista');
+            let draggedItem = null;
+
+            // Configurar eventos de arrastre para cada elemento
+            document.querySelectorAll('.usuario-item').forEach(item => {
+                item.addEventListener('dragstart', function(e) {
+                    draggedItem = this;
+                    setTimeout(() => this.style.opacity = '0.5', 0);
+                });
+
+                item.addEventListener('dragend', function() {
+                    draggedItem = null;
+                    this.style.opacity = '1';
+                });
+
+                item.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    if (this !== draggedItem) {
+                        const rect = this.getBoundingClientRect();
+                        const y = e.clientY - rect.top;
+                        if (y < rect.height / 2) {
+                            this.parentNode.insertBefore(draggedItem, this);
+                        } else {
+                            this.parentNode.insertBefore(draggedItem, this.nextSibling);
+                        }
+                    }
+                });
+            });
+
+            // Manejar el envío del formulario
+            document.getElementById('rutaForm').addEventListener('submit', function(e) {
+                const usuariosOrdenados = [];
+                document.querySelectorAll('.usuario-item input:checked').forEach((checkbox, index) => {
+                    usuariosOrdenados.push({
+                        id: checkbox.value,
+                        orden: index + 1
+                    });
+                });
+                
+                const inputOrden = document.createElement('input');
+                inputOrden.type = 'hidden';
+                inputOrden.name = 'usuarios_orden';
+                inputOrden.value = JSON.stringify(usuariosOrdenados);
+                this.appendChild(inputOrden);
+            });
+
+            // Verificar rutas finalizadas
+            const rutasFinalizadas = document.querySelectorAll('.ruta-finalizada');
+            rutasFinalizadas.forEach(ruta => {
+                const fechaFinalizacion = new Date(ruta.dataset.fechaFinalizacion);
+                const ahora = new Date();
+                const diferencia = ahora - fechaFinalizacion;
+                const horasTranscurridas = diferencia / (1000 * 60 * 60);
+
+                // Si han pasado más de 24 horas, ocultar la ruta
+                if (horasTranscurridas > 24) {
+                    ruta.style.display = 'none';
+                } else {
+                    // Programar la eliminación cuando se cumplan las 24 horas
+                    const tiempoRestante = (24 * 60 * 60 * 1000) - diferencia;
+                    setTimeout(() => {
+                        ruta.classList.add('fade-out');
+                        setTimeout(() => {
+                            ruta.style.display = 'none';
+                        }, 1000);
+                    }, tiempoRestante);
+                }
+            });
+        });
+    </script>
 </body>
 </html>

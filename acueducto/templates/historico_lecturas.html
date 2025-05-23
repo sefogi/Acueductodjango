@@ -6,6 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Histórico de Lecturas - {{ usuario.contrato }}</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -77,11 +78,35 @@
             margin: 0 auto;
             height: 400px;
         }
+        .nav-menu {
+            display: flex;
+            justify-content: space-around;
+            background-color: #4CAF50;
+            padding: 10px 0;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .nav-menu a {
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .nav-menu a:hover {
+            text-decoration: underline;
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="container">
+        <nav class="nav-menu">
+            <a href="{% url 'index' %}">Crear Usuario</a>
+            <a href="{% url 'modificar_usuario' %}">Modificar Usuario</a>
+            <a href="{% url 'lista_usuarios' %}">Lista de Usuarios</a>
+            <a href="{% url 'generar_factura' %}">Generar Factura</a>
+            <a href="{% url 'toma_lectura' %}">Toma de Lecturas</a>
+        </nav>
+
         <div class="header">
             <h1>Histórico de Lecturas</h1>
             <a href="{% url 'lista_usuarios' %}" class="back-btn">Volver a la Lista</a>
