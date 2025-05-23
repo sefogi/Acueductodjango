@@ -248,4 +248,32 @@ def historico_lecturas(request, contrato):
         'historico': historico
     })
 
+def modificar_usuario(request):
+    usuario = None
+    contrato_busqueda = request.GET.get('contrato', '')
+
+    if contrato_busqueda:
+        try:
+            usuario = UserAcueducto.objects.get(contrato=contrato_busqueda)
+        except UserAcueducto.DoesNotExist:
+            messages.error(request, 'Usuario no encontrado')
+
+    if request.method == 'POST' and 'actualizar' in request.POST:
+        try:
+            usuario = UserAcueducto.objects.get(contrato=request.POST.get('contrato'))
+            usuario.name = request.POST.get('name')
+            usuario.lastname = request.POST.get('lastname')
+            usuario.email = request.POST.get('email')
+            usuario.phone = request.POST.get('phone')
+            usuario.save()
+            messages.success(request, 'Usuario actualizado exitosamente')
+            return redirect('modificar_usuario')
+        except Exception as e:
+            messages.error(request, f'Error al actualizar usuario: {str(e)}')
+
+    return render(request, 'modificar_usuario.html', {
+        'usuario': usuario,
+        'contrato_busqueda': contrato_busqueda
+    })
+
 

@@ -308,6 +308,9 @@ body {
 .action-buttons {
     margin-top: 20px;
     text-align: center;
+    display: flex;
+    gap: 15px;
+    justify-content: center;
 }
 
 .action-btn {
@@ -317,6 +320,7 @@ body {
     border-radius: 4px;
     font-size: 16px;
     transition: all 0.3s ease;
+    min-width: 150px;
 }
 
 .generate-bill {
@@ -326,6 +330,16 @@ body {
 
 .generate-bill:hover {
     background-color: #45a049;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.modify-user {
+    background-color: #2196F3;
+    color: white;
+}
+
+.modify-user:hover {
+    background-color: #1976D2;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
@@ -383,4 +397,61 @@ body {
 
 .btn-historico:hover {
     background-color: #0056b3;
+}
+
+.modificar-form {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.modificar-form .form-group {
+    margin-bottom: 20px;
+}
+
+.modificar-form label {
+    display: block;
+    margin-bottom: 8px;
+    color: #333;
+    font-weight: 500;
+}
+
+.modificar-form .form-control {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+    transition: border-color 0.3s ease;
+}
+
+.modificar-form .form-control:focus {
+    outline: none;
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+.modificar-form .form-actions {
+    margin-top: 30px;
+    text-align: center;
+}
+
+.modificar-form .submit-btn {
+    background-color: #4CAF50;
+    color: white;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.3s ease;
+}
+
+.modificar-form .submit-btn:hover {
+    background-color: #45a049;
+    transform: translateY(-1px);
+}
+
+.modificar-form .submit-btn:active {
+    transform: translateY(0);
 }

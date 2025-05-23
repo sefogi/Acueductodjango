@@ -1,0 +1,123 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Modificar Usuario</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+</head>
+<body>
+    <div class="container">
+        <nav class="nav-menu">
+            <a href="{% url 'index' %}">Crear Usuario</a>
+            <a href="{% url 'lista_usuarios' %}">Lista de Usuarios</a>
+            <a href="{% url 'generar_factura' %}">Generar Factura</a>
+            <a href="{% url 'modificar_usuario' %}" class="active">Modificar Usuario</a>
+        </nav>
+
+        <h1>Modificar Usuario</h1>
+
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="message {{ message.tags }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="form-container">
+            <form method="POST" class="modificar-form" id="buscarUsuarioForm">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="buscar_contrato">Buscar por Número de Contrato:</label>
+                    <div class="input-group">
+                        <input type="text" 
+                               id="buscar_contrato" 
+                               name="buscar_contrato" 
+                               placeholder="Ingrese número de contrato"
+                               pattern="[0-9]+"
+                               title="Por favor ingrese solo números"
+                               class="form-control"
+                               value="{{ contrato_busqueda }}">
+                        <button type="button" id="buscarBtn" class="btn-search">Buscar</button>
+                    </div>
+                </div>
+            </form>
+
+            {% if usuario %}
+            <form method="POST" class="modificar-form" id="modificarForm">
+                {% csrf_token %}
+                <input type="hidden" name="contrato" value="{{ usuario.contrato }}">
+                
+                <div class="form-group">
+                    <label for="name">Nombre:</label>
+                    <input type="text" 
+                           id="name" 
+                           name="name" 
+                           value="{{ usuario.name }}"
+                           required 
+                           class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label for="lastname">Apellido:</label>
+                    <input type="text" 
+                           id="lastname" 
+                           name="lastname" 
+                           value="{{ usuario.lastname }}"
+                           required 
+                           class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email:</label>
+                    <input type="email" 
+                           id="email" 
+                           name="email" 
+                           value="{{ usuario.email }}"
+                           required 
+                           class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label for="phone">Teléfono:</label>
+                    <input type="tel" 
+                           id="phone" 
+                           name="phone" 
+                           value="{{ usuario.phone }}"
+                           class="form-control">
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" name="actualizar" class="submit-btn">Actualizar Usuario</button>
+                </div>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const buscarBtn = document.getElementById('buscarBtn');
+            const buscarForm = document.getElementById('buscarUsuarioForm');
+            
+            buscarBtn.addEventListener('click', function() {
+                const contrato = document.getElementById('buscar_contrato').value;
+                if (contrato) {
+                    window.location.href = `?contrato=${contrato}`;
+                }
+            });
+
+            document.getElementById('buscar_contrato').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    buscarBtn.click();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -10,4 +10,5 @@ urlpatterns = [
     path('toma-lectura/', views.toma_lectura, name='toma_lectura'),
     path('historico-lecturas/<str:contrato>/', views.historico_lecturas, name='historico_lecturas'),
     path('buscar-usuario/', views.buscar_usuario_por_contrato, name='buscar_usuario'),
+    path('modificar-usuario/', views.modificar_usuario, name='modificar_usuario'),
 ]
