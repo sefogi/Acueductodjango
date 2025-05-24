@@ -238,7 +238,7 @@
 
         <div class="total">
             {% with total=usuario.lectura|add:usuario.credito|add:usuario.otros_gastos_valor %}
-            Total a Pagar: ${{ total|floatformat:2 }}
+            Total a Pagar: ${{ total|floatformat:3 }}
             {% endwith %}
         </div>
 
