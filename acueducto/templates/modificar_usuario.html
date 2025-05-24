@@ -123,6 +123,52 @@
                            class="form-control">
                 </div>
 
+                <div class="section-divider">
+                    <h3>Extras</h3>
+                </div>
+
+                <div class="form-group">
+                    <label for="credito_descripcion">Descripción del Crédito:</label>
+                    <textarea id="credito_descripcion" 
+                            name="credito_descripcion" 
+                            class="form-control"
+                            rows="2">{{ usuario.credito_descripcion }}</textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="credito">Valor del Crédito:</label>
+                    <div class="input-group">
+                        <span class="currency-symbol">$</span>
+                        <input type="number" 
+                               id="credito" 
+                               name="credito" 
+                               value="{{ usuario.credito|default:0 }}"
+                               step="0.01"
+                               class="form-control currency-input">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="otros_gastos_descripcion">Descripción de Otros Gastos:</label>
+                    <textarea id="otros_gastos_descripcion" 
+                            name="otros_gastos_descripcion" 
+                            class="form-control"
+                            rows="3">{{ usuario.otros_gastos_descripcion }}</textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="otros_gastos_valor">Valor de Otros Gastos:</label>
+                    <div class="input-group">
+                        <span class="currency-symbol">$</span>
+                        <input type="number" 
+                               id="otros_gastos_valor" 
+                               name="otros_gastos_valor" 
+                               value="{{ usuario.otros_gastos_valor|default:0 }}"
+                               step="0.01"
+                               class="form-control currency-input">
+                    </div>
+                </div>
+
                 <div class="form-actions">
                     <button type="submit" name="actualizar" class="submit-btn">Actualizar Usuario</button>
                 </div>

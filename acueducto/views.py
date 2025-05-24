@@ -422,32 +422,37 @@ def historico_lecturas(request, contrato):
 
 @login_required(login_url='login')
 def modificar_usuario(request):
+    contrato_busqueda = request.GET.get('contrato')
     usuario = None
-    contrato_busqueda = request.GET.get('contrato', '')
-
     if contrato_busqueda:
+        usuario = get_object_or_404(UserAcueducto, contrato=contrato_busqueda)
+    
+    if request.method == 'POST':
+        contrato = request.POST.get('contrato')
+        usuario = get_object_or_404(UserAcueducto, contrato=contrato)
+        
         try:
-            usuario = UserAcueducto.objects.get(contrato=contrato_busqueda)
-        except UserAcueducto.DoesNotExist:
-            messages.error(request, 'Usuario no encontrado')
-            return redirect('modificar_usuario')
-
-    if request.method == 'POST' and 'actualizar' in request.POST:
-        try:
-            usuario = UserAcueducto.objects.get(contrato=request.POST.get('contrato'))
+            # Actualizar los campos básicos
             usuario.name = request.POST.get('name')
             usuario.lastname = request.POST.get('lastname')
             usuario.email = request.POST.get('email')
             usuario.phone = request.POST.get('phone')
+            usuario.address = request.POST.get('address')
             usuario.categoria = request.POST.get('categoria')
             usuario.zona = request.POST.get('zona')
-            usuario.address = request.POST.get('address')
+            
+            # Actualizar crédito y otros gastos
+            usuario.credito = request.POST.get('credito', 0)
+            usuario.credito_descripcion = request.POST.get('credito_descripcion', '')
+            usuario.otros_gastos_valor = request.POST.get('otros_gastos_valor', 0)
+            usuario.otros_gastos_descripcion = request.POST.get('otros_gastos_descripcion', '')
+            
             usuario.save()
             messages.success(request, 'Usuario actualizado exitosamente')
-            return redirect('modificar_usuario')
+            
         except Exception as e:
             messages.error(request, f'Error al actualizar usuario: {str(e)}')
-
+    
     return render(request, 'modificar_usuario.html', {
         'usuario': usuario,
         'contrato_busqueda': contrato_busqueda

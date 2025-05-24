@@ -969,3 +969,44 @@ select.form-control {
     background-color: #fff;
     color: #333;
 }
+
+/* Agregar estilos para la sección de extras */
+.section-divider {
+    margin: 30px 0 20px;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 10px;
+}
+
+.section-divider h3 {
+    color: #0ec1ee;
+    font-size: 1.3em;
+    margin: 0;
+}
+
+.input-group {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.currency-symbol {
+    position: absolute;
+    left: 10px;
+    color: #666;
+    z-index: 1;
+}
+
+.currency-input {
+    padding-left: 25px !important;
+}
+
+textarea.form-control {
+    resize: vertical;
+    min-height: 80px;
+}
+
+/* Estilos para los campos de moneda */
+input[type="number"].currency-input {
+    text-align: right;
+    padding-right: 10px;
+}

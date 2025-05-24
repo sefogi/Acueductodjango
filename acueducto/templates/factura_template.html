@@ -101,6 +101,21 @@
             font-size: 18px;
             font-weight: bold;
         }
+        
+        .extras-row {
+            background-color: #f8f9fa;
+        }
+        
+        .extras-row td {
+            padding: 12px 15px;
+            color: #444;
+        }
+        
+        .extras-row td:last-child {
+            font-weight: bold;
+            color: #333;
+        }
+
         .footer {
             margin-top: 50px;
             text-align: center;
@@ -204,11 +219,27 @@
                     <td>$1.000 por unidad</td>
                     <td>${{ usuario.lectura|floatformat:3|default:"0" }}</td>
                 </tr>
+                {% if usuario.credito %}
+                <tr class="extras-row">
+                    <td>Crédito</td>
+                    <td colspan="2">{{ usuario.credito_descripcion|default:"Saldo pendiente" }}</td>
+                    <td>${{ usuario.credito|floatformat:2 }}</td>
+                </tr>
+                {% endif %}
+                {% if usuario.otros_gastos_valor %}
+                <tr class="extras-row">
+                    <td>Otros Gastos</td>
+                    <td colspan="2">{{ usuario.otros_gastos_descripcion }}</td>
+                    <td>${{ usuario.otros_gastos_valor|floatformat:2 }}</td>
+                </tr>
+                {% endif %}
             </tbody>
         </table>
 
         <div class="total">
-            Total a Pagar: ${{ usuario.lectura|floatformat:3|default:"0" }}
+            {% with total=usuario.lectura|add:usuario.credito|add:usuario.otros_gastos_valor %}
+            Total a Pagar: ${{ total|floatformat:2 }}
+            {% endwith %}
         </div>
 
         <div class="grafico-container">

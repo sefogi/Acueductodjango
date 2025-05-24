@@ -18,6 +18,10 @@ class UserAcueducto(models.Model):
     lectura = models.FloatField(blank=True, null=True)
     categoria = models.CharField(max_length=20, choices=CATEGORIA_CHOICES, default='residencial')
     zona = models.CharField(max_length=100, blank=True)
+    credito = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    credito_descripcion = models.TextField(blank=True)
+    otros_gastos_valor = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    otros_gastos_descripcion = models.TextField(blank=True)
 
     def __str__(self):
         return f"{self.name} {self.lastname} - {self.contrato}"
