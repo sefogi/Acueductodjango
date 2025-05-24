@@ -1,0 +1,212 @@
+{% load static %}
+{% load acueducto_filters %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Histórico de Lecturas - {{ usuario.contrato }}</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .header img {
+            height: 50px;
+            width: auto;
+            object-fit: contain;
+            margin-right: 20px;
+        }
+        h1 {
+            color: #333;
+            margin: 0;
+        }
+        .info-usuario {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .back-btn {
+            display: inline-block;
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .back-btn:hover {
+            background-color: #45a049;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        tr:hover {
+            background-color: #f9f9f9;
+        }
+        .grafico-container {
+            margin: 30px 0;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+        }
+        #graficoHistorico {
+            max-width: 800px;
+            margin: 0 auto;
+            height: 400px;
+        }
+        .nav-menu {
+            display: flex;
+            justify-content: space-around;
+            background-color: #4CAF50;
+            padding: 10px 0;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .nav-menu a {
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .nav-menu a:hover {
+            text-decoration: underline;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <nav class="nav-menu">
+            <a href="{% url 'index' %}">Crear Usuario</a>
+            <a href="{% url 'modificar_usuario' %}">Modificar Usuario</a>
+            <a href="{% url 'lista_usuarios' %}">Lista de Usuarios</a>
+            <a href="{% url 'generar_factura' %}">Generar Factura</a>
+            <a href="{% url 'toma_lectura' %}">Toma de Lecturas</a>
+        </nav>
+
+        <div class="header">
+            <div style="display: flex; align-items: center;">
+                <img src="{% static 'images/akualogo.webp' %}" alt="Akua Logo">
+                <h1>Histórico de Lecturas</h1>
+            </div>
+            <a href="{% url 'lista_usuarios' %}" class="back-btn">Volver a la Lista</a>
+        </div>
+
+        <div class="info-usuario">
+            <h2>Información del Usuario</h2>
+            <p><strong>Contrato:</strong> {{ usuario.contrato }}</p>
+            <p><strong>Nombre:</strong> {{ usuario.name }} {{ usuario.lastname }}</p>
+            <p><strong>Dirección:</strong> {{ usuario.address }}</p>
+        </div>
+
+        <div class="grafico-container">
+            <canvas id="graficoHistorico"></canvas>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Lectura</th>
+                    <th>Consumo</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lectura in historico %}
+                <tr>
+                    <td>{{ lectura.fecha_lectura|date:"d/m/Y" }}</td>
+                    <td>{{ lectura.lectura }}</td>
+                    <td>{{ historico|calcular_consumo:forloop.counter0 }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3">No hay lecturas registradas.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var ctx = document.getElementById('graficoHistorico').getContext('2d');
+            var lecturas = [
+                {% for lectura in historico %}
+                    {{ lectura.lectura }},
+                {% endfor %}
+            ];
+            var fechas = [
+                {% for lectura in historico %}
+                    '{{ lectura.fecha_lectura|date:"d/m/Y" }}',
+                {% endfor %}
+            ];
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: fechas.reverse(),
+                    datasets: [{
+                        label: 'Lecturas',
+                        data: lecturas.reverse(),
+                        borderColor: 'rgb(75, 192, 192)',
+                        tension: 0.1,
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Histórico de Lecturas'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Lectura (m³)'
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

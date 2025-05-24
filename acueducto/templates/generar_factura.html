@@ -11,11 +11,16 @@
     <div class="container">
         <nav class="nav-menu">
             <a href="{% url 'index' %}">Crear Usuario</a>
+            <a href="{% url 'modificar_usuario' %}">Modificar Usuario</a>
             <a href="{% url 'lista_usuarios' %}">Lista de Usuarios</a>
             <a href="{% url 'generar_factura' %}" class="active">Generar Factura</a>
+            
         </nav>
 
-        <h1>Generar Factura</h1>
+        <div class="header-container">
+            <img src="{% static 'images/akualogo.webp' %}" alt="Akua Logo">
+            <h1>Generar Factura</h1>
+        </div>
 
         {% if messages %}
         <div class="messages">
@@ -30,6 +35,27 @@
         <div class="form-container">
             <form method="POST" class="factura-form">
                 {% csrf_token %}
+                <div class="form-group">
+                    <label>Período de Facturación para Todas las Facturas:</label>
+                    <div class="periodo-facturacion">
+                        <div class="fecha-inicio">
+                            <label for="periodo_inicio_todas">Desde:</label>
+                            <input type="date" 
+                                   id="periodo_inicio_todas" 
+                                   name="periodo_inicio_todas" 
+                                   required 
+                                   class="form-control">
+                        </div>
+                        <div class="fecha-fin">
+                            <label for="periodo_fin_todas">Hasta:</label>
+                            <input type="date" 
+                                   id="periodo_fin_todas" 
+                                   name="periodo_fin_todas" 
+                                   required 
+                                   class="form-control">
+                        </div>
+                    </div>
+                </div>
                 <button type="submit" name="generar_todas" class="submit-btn generate-all">
                     Generar Facturas de Todos los Usuarios
                 </button>
@@ -39,19 +65,59 @@
                 <span>o generar factura individual</span>
             </div>
 
-            <form method="POST" class="factura-form">
+            <form method="POST" class="factura-form" id="facturaIndividualForm">
                 {% csrf_token %}
                 <div class="form-group">
-                    <label for="contrato">Seleccionar Usuario:</label>
-                    <select id="contrato" name="contrato" required class="select-user">
-                        <option value="">Seleccione un usuario...</option>
-                        {% for usuario in usuarios %}
-                        <option value="{{ usuario.contrato }}" {% if usuario.contrato == contrato_preseleccionado %}selected{% endif %}>
-                            {{ usuario.contrato }} - {{ usuario.name }} {{ usuario.lastname }}
-                        </option>
-                        {% endfor %}
-                    </select>
+                    <label for="contrato">Número de Contrato:</label>
+                    <div class="input-group">
+                        <input type="text" 
+                               id="contrato" 
+                               name="contrato" 
+                               placeholder="Ingrese número de contrato"
+                               pattern="[0-9]+"
+                               title="Por favor ingrese solo números"
+                               class="form-control"
+                               required>
+                        <button type="button" id="buscarContrato" class="btn-search">Buscar</button>
+                    </div>
                 </div>
+
+                <div id="usuarioInfo" class="user-info" style="display: none;">
+                    <p>Usuario seleccionado: <span id="nombreUsuario"></span></p>
+                </div>
+
+                <div class="form-group">
+                    <label for="fecha_emision">Fecha de Emisión:</label>
+                    <input type="date" 
+                           id="fecha_emision" 
+                           name="fecha_emision" 
+                           required 
+                           value="{% now 'Y-m-d' %}"
+                           class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label>Período de Facturación:</label>
+                    <div class="periodo-facturacion">
+                        <div class="fecha-inicio">
+                            <label for="periodo_inicio">Desde:</label>
+                            <input type="date" 
+                                   id="periodo_inicio" 
+                                   name="periodo_inicio" 
+                                   required 
+                                   class="form-control">
+                        </div>
+                        <div class="fecha-fin">
+                            <label for="periodo_fin">Hasta:</label>
+                            <input type="date" 
+                                   id="periodo_fin" 
+                                   name="periodo_fin" 
+                                   required 
+                                   class="form-control">
+                        </div>
+                    </div>
+                </div>
+
                 <div class="form-actions">
                     <button type="submit" name="descargar" class="submit-btn">Descargar Factura</button>
                     <button type="submit" name="enviar_email" class="submit-btn email-btn">Enviar por Email</button>
@@ -60,6 +126,70 @@
         </div>
     </div>
 
-    <script src="{% static 'script.js' %}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const contratoInput = document.getElementById('contrato');
+            const buscarBtn = document.getElementById('buscarContrato');
+            const usuarioInfo = document.getElementById('usuarioInfo');
+            const nombreUsuarioSpan = document.getElementById('nombreUsuario');
+
+            function buscarUsuarioPorContrato() {
+                const numeroContrato = contratoInput.value.trim();
+                
+                if (!numeroContrato) {
+                    alert('Por favor ingrese un número de contrato');
+                    return;
+                }
+
+                fetch(`/buscar-usuario/?contrato=${numeroContrato}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.found) {
+                            nombreUsuarioSpan.textContent = data.nombre;
+                            usuarioInfo.style.display = 'block';
+                        } else {
+                            alert('No se encontró ningún usuario con ese número de contrato');
+                            usuarioInfo.style.display = 'none';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Ocurrió un error al buscar el usuario');
+                    });
+            }
+
+            if (buscarBtn) {
+                buscarBtn.addEventListener('click', buscarUsuarioPorContrato);
+            }
+
+            if (contratoInput) {
+                contratoInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        buscarUsuarioPorContrato();
+                    }
+                });
+            }
+
+            // Establecer fechas por defecto para el período de facturación
+            const today = new Date();
+            const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+            // Formatear fechas para el input type="date"
+            const formatDate = (date) => {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+
+            // Establecer valores por defecto
+            document.getElementById('periodo_inicio_todas').value = formatDate(firstDayOfMonth);
+            document.getElementById('periodo_fin_todas').value = formatDate(lastDayOfMonth);
+            document.getElementById('periodo_inicio').value = formatDate(firstDayOfMonth);
+            document.getElementById('periodo_fin').value = formatDate(lastDayOfMonth);
+        });
+    </script>
 </body>
 </html>
