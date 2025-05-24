@@ -44,8 +44,8 @@ def lista_usuarios(request):
     busqueda = request.GET.get('busqueda', '')
     usuarios = UserAcueducto.objects.all()
     
-    # Obtener todas las rutas
-    rutas_activas = Ruta.objects.all().prefetch_related('ordenruta_set__usuario')
+    # Obtener solo las rutas activas
+    rutas_activas = Ruta.objects.filter(activa=True).prefetch_related('ordenruta_set__usuario')
 
     if request.method == 'POST' and 'generar_ruta' in request.POST:
         try:
@@ -258,8 +258,8 @@ def toma_lectura(request):
     historico = None
     
     try:
-        # Obtener la única ruta existente
-        ruta = Ruta.objects.prefetch_related(
+        # Obtener la ruta activa
+        ruta = Ruta.objects.filter(activa=True).prefetch_related(
             'ordenruta_set__usuario',
             'ordenruta_set__usuario__lecturas'
         ).first()
@@ -388,8 +388,11 @@ def finalizar_ruta(request):
                     'error': 'No se puede finalizar la ruta. Hay lecturas pendientes.'
                 }, status=400)
             
-            # Finalizar y eliminar la ruta inmediatamente
-            ruta.delete()
+            # Marcar la ruta como finalizada
+            from django.utils import timezone
+            ruta.activa = False
+            ruta.fecha_finalizacion = timezone.now()
+            ruta.save()
             
             return JsonResponse({
                 'message': 'Ruta finalizada exitosamente',

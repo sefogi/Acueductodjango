@@ -1,5 +1,5 @@
 async function finalizarRuta(rutaId) {
-    if (!confirm('¿Estás seguro que deseas finalizar esta ruta? Esta acción eliminará la ruta inmediatamente.')) {
+    if (!confirm('¿Estás seguro que deseas finalizar esta ruta? Las rutas finalizadas no se mostrarán en la lista de rutas activas.')) {
         return;
     }
 
