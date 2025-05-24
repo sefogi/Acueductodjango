@@ -5,7 +5,7 @@
 }
 
 h1 {
-    color: #333;
+    color: #0ec1ee;
     text-align: center;
     margin-bottom: 30px;
 }
@@ -53,10 +53,11 @@ body {
 
 .form-container {
     background-color: white;
-    padding: 20px;
+    padding: 40px;
     border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-    margin-bottom: 30px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    margin: 30px auto;
+    max-width: 1100px;
 }
 
 .form-container h2 {
@@ -66,28 +67,47 @@ body {
 
 .create-user-form {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 25px 35px;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
 }
 
 .form-group {
     margin-bottom: 15px;
+    padding: 10px;
+    position: relative;
 }
 
 .form-group label {
     display: block;
-    margin-bottom: 5px;
+    margin-bottom: 10px;
     color: #555;
+    font-weight: 500;
 }
 
-.form-group input {
+.form-group input,
+.form-group select {
     width: 100%;
-    padding: 8px;
-    border: 1px solid #ddd;
+    padding: 10px;
+    border: 0.5px solid #ddd;
     border-radius: 4px;
-    font-size: 16px;
+    font-size: 14px;
+    transition: border-color 0.3s ease;
+    background-color: #fff;
 }
 
+/* Grupos específicos para el layout */
+.form-group.col-span-2 {
+    grid-column: span 2;
+}
+
+.form-group.col-span-3 {
+    grid-column: span 3;
+}
+
+/* Botón submit */
 .submit-btn {
     grid-column: 1 / -1;
     background-color: #4CAF50;
@@ -97,10 +117,13 @@ body {
     border-radius: 4px;
     cursor: pointer;
     font-size: 16px;
+    margin-top: 20px;
+    transition: background-color 0.3s ease;
 }
 
 .submit-btn:hover {
     background-color: #45a049;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .messages {
@@ -258,7 +281,7 @@ body {
 .input-group input:focus {
     outline: none;
     border-color: #4CAF50;
-    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+    box-shadow: 0 0 0 0.5px rgba(76, 175, 80, 0.2);
 }
 
 .btn-search {
@@ -473,7 +496,7 @@ select.form-control {
 .modificar-form .form-control:focus {
     outline: none;
     border-color: #4CAF50;
-    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+    box-shadow: 0 0 0 0.5px rgba(76, 175, 80, 0.2);
 }
 
 .modificar-form .form-actions {

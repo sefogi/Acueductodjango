@@ -14,10 +14,12 @@
             <a href="{% url 'modificar_usuario' %}">Modificar Usuario</a>
             <a href="{% url 'lista_usuarios' %}">Lista de Usuarios</a>
             <a href="{% url 'generar_factura' %}">Generar Factura</a>
-            <a href="{% url 'toma_lectura' %}">Toma de Lecturas</a>
+            
         </nav>
 
+        
         <h1>Crear Nuevo Usuario</h1>
+        
 
         {% if messages %}
         <div class="messages">
@@ -32,6 +34,7 @@
         <div class="form-container">
             <form method="POST" class="create-user-form">
                 {% csrf_token %}
+                <!-- Primera fila: Contrato y Fecha -->
                 <div class="form-group">
                     <label for="contrato">Contrato:</label>
                     <input type="text" id="contrato" name="contrato" required>
@@ -40,6 +43,9 @@
                     <label for="date">Fecha:</label>
                     <input type="date" id="date" name="date">
                 </div>
+                <div class="form-group"></div>
+
+                <!-- Segunda fila: Nombre, Apellido, Email -->
                 <div class="form-group">
                     <label for="name">Nombre:</label>
                     <input type="text" id="name" name="name" required>
@@ -52,6 +58,8 @@
                     <label for="email">Email:</label>
                     <input type="email" id="email" name="email" required>
                 </div>
+
+                <!-- Tercera fila: Teléfono, Dirección, Lectura -->
                 <div class="form-group">
                     <label for="phone">Teléfono:</label>
                     <input type="tel" id="phone" name="phone">
@@ -64,6 +72,8 @@
                     <label for="lectura">Lectura:</label>
                     <input type="number" step="0.01" id="lectura" name="lectura">
                 </div>
+
+                <!-- Cuarta fila: Categoría y Zona -->
                 <div class="form-group">
                     <label for="categoria">Categoría:</label>
                     <select id="categoria" name="categoria" required>
@@ -75,6 +85,8 @@
                     <label for="zona">Zona:</label>
                     <input type="text" id="zona" name="zona" required>
                 </div>
+                <div class="form-group"></div>
+
                 <button type="submit" class="submit-btn">Crear Usuario</button>
             </form>
         </div>

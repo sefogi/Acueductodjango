@@ -169,7 +169,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (usuariosOrdenados.length < 2) {
             e.preventDefault();
             showError('Una ruta debe contener al menos dos usuarios');
-            return;
+            
         }
     });
 });
