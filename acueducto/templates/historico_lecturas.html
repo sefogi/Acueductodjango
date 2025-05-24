@@ -27,6 +27,16 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 30px;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .header img {
+            height: 50px;
+            width: auto;
+            object-fit: contain;
+            margin-right: 20px;
         }
         h1 {
             color: #333;
@@ -108,7 +118,10 @@
         </nav>
 
         <div class="header">
-            <h1>Histórico de Lecturas</h1>
+            <div style="display: flex; align-items: center;">
+                <img src="{% static 'images/akualogo.webp' %}" alt="Akua Logo">
+                <h1>Histórico de Lecturas</h1>
+            </div>
             <a href="{% url 'lista_usuarios' %}" class="back-btn">Volver a la Lista</a>
         </div>
 

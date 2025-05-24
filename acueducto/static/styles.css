@@ -335,27 +335,49 @@ body {
 }
 
 select.form-control {
+    display: block;
     width: 100%;
-    padding: 8px;
+    padding: 8px 12px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #333;
+    background-color: #fff;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M10.293 3.293L6 7.586 1.707 3.293A1 1 0 00.293 4.707l5 5a1 1 0 001.414 0l5-5a1 1 0 10-1.414-1.414z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 12px;
     border: 1px solid #ddd;
     border-radius: 4px;
-    box-sizing: border-box;
-    font-size: 14px;
-    background-color: white;
-    height: 35px;
-    appearance: auto;
-    -webkit-appearance: auto;
-    -moz-appearance: auto;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    height: 40px;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    cursor: pointer;
 }
 
-input[type="text"].form-control,
-input[type="email"].form-control,
-input[type="tel"].form-control,
-input[type="date"].form-control,
-input[type="number"].form-control,
-select.form-control {
-    height: 35px;
-    line-height: 35px;
+.form-group select.form-control:focus {
+    border-color: #4CAF50;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(76, 175, 80, 0.25);
+}
+
+.form-group select.form-control:hover {
+    border-color: #999;
+}
+
+.form-group select.form-control option {
+    padding: 12px;
+    background-color: #fff;
+    color: #333;
+    font-size: 14px;
+}
+
+/* Estilo específico para el campo de categoría */
+#categoria {
+    font-weight: normal;
+    text-transform: capitalize;
+    letter-spacing: 0.2px;
 }
 
 .form-actions {
@@ -880,4 +902,70 @@ select.form-control {
     color: #6c757d;
     font-size: 14px;
     margin-top: 5px;
+}
+
+.header-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 40px;
+    background-color: white;
+    padding: 30px 50px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin: 30px auto;
+    max-width: 1100px;
+    min-height: 140px;
+}
+
+.header-container img {
+    height: 120px; /* Aumentado de 100px a 120px (20% más) */
+    width: auto;
+    object-fit: contain;
+}
+
+.header-container h1 {
+    margin: 0;
+    color: #0ec1ee;
+    font-size: 2.2em;
+    text-align: center;
+    flex-grow: 1;
+    padding-right: 120px; /* Para compensar el espacio del logo y mantener el título centrado */
+}
+
+.form-group select {
+    width: 100%;
+    padding: 10px;
+    border: 0.5px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    background-color: #fff;
+    color: #333;
+    height: 40px;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 16px;
+    padding-right: 35px;
+}
+
+.form-group select:focus {
+    border-color: #4CAF50;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
+}
+
+.form-group select:hover {
+    border-color: #999;
+}
+
+.form-group select option {
+    padding: 10px;
+    font-size: 14px;
+    background-color: #fff;
+    color: #333;
 }

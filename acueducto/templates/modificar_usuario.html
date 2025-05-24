@@ -17,7 +17,10 @@
             
         </nav>
 
-        <h1>Modificar Usuario</h1>
+        <div class="header-container">
+            <img src="{% static 'images/akualogo.webp' %}" alt="Akua Logo">
+            <h1>Modificar Usuario</h1>
+        </div>
 
         {% if messages %}
         <div class="messages">
@@ -94,6 +97,7 @@
                 <div class="form-group">
                     <label for="categoria">Categoría:</label>
                     <select id="categoria" name="categoria" required class="form-control">
+                        <option value="">Seleccione una categoría</option>
                         <option value="residencial" {% if usuario.categoria == 'residencial' %}selected{% endif %}>Residencial</option>
                         <option value="comercial" {% if usuario.categoria == 'comercial' %}selected{% endif %}>Comercial</option>
                     </select>
