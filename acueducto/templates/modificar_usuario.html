@@ -54,8 +54,10 @@
             <h3>Editando Usuario: {{ usuario.name }} {{ usuario.lastname }} (Contrato: {{ usuario.contrato }})</h3>
             <form method="POST" class="modificar-form" id="modificarForm">
                 {% csrf_token %}
-                {# This hidden input is crucial for POST to identify the user since 'contrato' in form is disabled #}
+                
                 <input type="hidden" name="contrato" value="{{ usuario.contrato }}">
+                
+
                 
                 {{ form.as_p }}
                 
@@ -64,7 +66,7 @@
                 </div>
             </form>
             {% elif contrato_busqueda %} 
-                {# This case handles when a search was made but no user was found, message is shown via messages framework #}
+                
                 <p>Revise el número de contrato e intente de nuevo.</p>
             {% endif %}
         </div>
