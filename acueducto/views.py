@@ -119,7 +119,13 @@ def generar_pdf_factura(usuario, fecha_emision, periodo_facturacion, base_url):
         consumo_m3 = 0
 
     valor_por_m3 = 1000
-    costo_consumo_raw = consumo_m3 * valor_por_m3
+    
+    # Calculate costo_consumo_raw based on usuario.lectura
+    if usuario.lectura is not None:
+        costo_consumo_raw = usuario.lectura * valor_por_m3
+    else:
+        costo_consumo_raw = 0
+        
     costo_consumo_agua_redondeado = round(costo_consumo_raw)
 
     credito = usuario.credito if usuario.credito is not None else 0
