@@ -378,3 +378,86 @@ class UserModificationTests(TestCase):
         # Check that our original user is unchanged
         self.user_to_modify.refresh_from_db()
         self.assertEqual(self.user_to_modify.name, 'Original Name')
+
+
+from django.test import SimpleTestCase # Added for SimpleTestCase
+from django.template import Context, Template # Added
+from decimal import Decimal # Added
+
+class FormatCOPTemplateFilterTests(SimpleTestCase):
+    def render_template(self, string, context=None):
+        context = context or {}
+        context = Context(context)
+        # Ensure the filter is loaded in the template string
+        template_string = "{% load acueducto_filters %} " + string
+        return Template(template_string).render(context)
+
+    def test_format_cop_integer(self):
+        rendered = self.render_template("{{ value|format_cop }}", {"value": 1234567})
+        self.assertEqual(rendered, "$ 1.234.567,00")
+
+    def test_format_cop_float(self):
+        rendered = self.render_template("{{ value|format_cop }}", {"value": 12345.67})
+        self.assertEqual(rendered, "$ 12.345,67")
+
+    def test_format_cop_decimal(self):
+        rendered = self.render_template("{{ value|format_cop }}", {"value": Decimal('12345.67')})
+        self.assertEqual(rendered, "$ 12.345,67")
+
+    def test_format_cop_with_3_decimal_places(self):
+        rendered = self.render_template("{{ value|format_cop:3 }}", {"value": 123.456})
+        self.assertEqual(rendered, "$ 123,456")
+        
+    def test_format_cop_with_custom_float_3_decimal_places(self):
+        rendered = self.render_template("{{ value|format_cop:3 }}", {"value": 12345.678})
+        self.assertEqual(rendered, "$ 12.345,678")
+
+    def test_format_cop_with_0_decimal_places(self):
+        rendered = self.render_template("{{ value|format_cop:0 }}", {"value": 12345})
+        self.assertEqual(rendered, "$ 12.345")
+        
+    def test_format_cop_float_with_0_decimal_places(self):
+        # Test rounding behavior (default float formatting usually rounds)
+        rendered = self.render_template("{{ value|format_cop:0 }}", {"value": 12345.6}) 
+        self.assertEqual(rendered, "$ 12.346") # 12345.6 rounds to 12346 with 0 decimal places
+
+    def test_format_cop_none_value(self):
+        rendered = self.render_template("{{ value|format_cop }}", {"value": None})
+        self.assertEqual(rendered, "")
+
+    def test_format_cop_zero_value(self):
+        rendered = self.render_template("{{ value|format_cop }}", {"value": 0})
+        self.assertEqual(rendered, "$ 0,00")
+        
+    def test_format_cop_zero_value_0_decimals(self):
+        rendered = self.render_template("{{ value|format_cop:0 }}", {"value": 0})
+        self.assertEqual(rendered, "$ 0")
+
+    def test_format_cop_negative_value(self):
+        rendered = self.render_template("{{ value|format_cop }}", {"value": -12345.67})
+        self.assertEqual(rendered, "$ -12.345,67")
+        
+    def test_format_cop_negative_value_0_decimals(self):
+        rendered = self.render_template("{{ value|format_cop:0 }}", {"value": -12345.67})
+        self.assertEqual(rendered, "$ -12.346") # Test rounding for negative
+
+    def test_format_cop_string_value_valid_number(self):
+        rendered = self.render_template("{{ value|format_cop }}", {"value": "12345.67"})
+        self.assertEqual(rendered, "$ 12.345,67")
+
+    def test_format_cop_string_value_invalid_number(self):
+        rendered = self.render_template("{{ value|format_cop }}", {"value": "not_a_number"})
+        self.assertEqual(rendered, "")
+        
+    def test_format_cop_large_number(self):
+        rendered = self.render_template("{{ value|format_cop }}", {"value": 1234567890.12})
+        self.assertEqual(rendered, "$ 1.234.567.890,12")
+
+    def test_format_cop_small_number_many_decimals_default(self):
+        # Default is 2 decimal places, should round
+        rendered = self.render_template("{{ value|format_cop }}", {"value": 0.12345})
+        self.assertEqual(rendered, "$ 0,12")
+        
+    def test_format_cop_small_number_many_decimals_custom(self):
+        rendered = self.render_template("{{ value|format_cop:4 }}", {"value": 0.12345})
+        self.assertEqual(rendered, "$ 0,1235") # Test rounding with more decimal places
