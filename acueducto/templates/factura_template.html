@@ -217,7 +217,7 @@
                         {% endif %}
                     </td>
                     <td>$1.000 por unidad</td>
-                    <td>{{ usuario.lectura|format_cop:3 }}</td>
+                    <td>{{ costo_consumo_agua_redondeado|format_cop:0 }}</td>
                 </tr>
                 {% if usuario.credito %}
                 <tr class="extras-row">
@@ -245,9 +245,7 @@
         </table>
 
         <div class="total">
-            {% with total=usuario.lectura|add:usuario.credito|add:usuario.otros_gastos_valor %}
-            Total a Pagar: {{ total|format_cop:3 }}
-            {% endwith %}
+            Total a Pagar: {{ total_factura_redondeado|format_cop:0 }}
         </div>
 
         <div class="grafico-container">
