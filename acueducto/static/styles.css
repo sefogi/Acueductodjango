@@ -5,7 +5,7 @@
 }
 
 h1 {
-    color: #333;
+    color: #0ec1ee;
     text-align: center;
     margin-bottom: 30px;
 }
@@ -39,6 +39,10 @@ h1 {
     background-color: #f8f8f8;
 }
 
+.users-table td:last-child {
+    text-align: center;
+}
+
 body {
     font-family: Arial, sans-serif;
     line-height: 1.6;
@@ -49,10 +53,11 @@ body {
 
 .form-container {
     background-color: white;
-    padding: 20px;
+    padding: 40px;
     border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-    margin-bottom: 30px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    margin: 30px auto;
+    max-width: 1100px;
 }
 
 .form-container h2 {
@@ -62,28 +67,47 @@ body {
 
 .create-user-form {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 25px 35px;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
 }
 
 .form-group {
     margin-bottom: 15px;
+    padding: 10px;
+    position: relative;
 }
 
 .form-group label {
     display: block;
-    margin-bottom: 5px;
+    margin-bottom: 10px;
     color: #555;
+    font-weight: 500;
 }
 
-.form-group input {
+.form-group input,
+.form-group select {
     width: 100%;
-    padding: 8px;
-    border: 1px solid #ddd;
+    padding: 10px;
+    border: 0.5px solid #ddd;
     border-radius: 4px;
-    font-size: 16px;
+    font-size: 14px;
+    transition: border-color 0.3s ease;
+    background-color: #fff;
 }
 
+/* Grupos específicos para el layout */
+.form-group.col-span-2 {
+    grid-column: span 2;
+}
+
+.form-group.col-span-3 {
+    grid-column: span 3;
+}
+
+/* Botón submit */
 .submit-btn {
     grid-column: 1 / -1;
     background-color: #4CAF50;
@@ -93,10 +117,13 @@ body {
     border-radius: 4px;
     cursor: pointer;
     font-size: 16px;
+    margin-top: 20px;
+    transition: background-color 0.3s ease;
 }
 
 .submit-btn:hover {
     background-color: #45a049;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .messages {
@@ -122,25 +149,27 @@ body {
 }
 
 .nav-menu {
-    background-color: white;
-    padding: 15px;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-    margin-bottom: 30px;
     display: flex;
-    gap: 20px;
+    justify-content: space-between;
+    align-items: center;
+    background-color: white;
+    padding: 15px 20px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
 }
 
 .nav-menu a {
+    padding: 8px 16px;
     text-decoration: none;
     color: #666;
-    padding: 8px 16px;
     border-radius: 4px;
-    transition: all 0.3s ease;
+    transition: background-color 0.3s ease;
 }
 
 .nav-menu a:hover {
     background-color: #f5f5f5;
+    color: #333;
 }
 
 .nav-menu a.active {
@@ -148,12 +177,50 @@ body {
     color: white;
 }
 
+.nav-menu .user-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.nav-menu .user-info span {
+    color: #666;
+    font-size: 14px;
+}
+
+.logout-btn {
+    display: inline-block;
+    padding: 8px 16px;
+    background-color: #dc3545;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+}
+
+.logout-btn:hover {
+    background-color: #c82333;
+}
+
+.header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.actions-container {
+    display: flex;
+    gap: 10px;
+}
+
 .search-container {
+    margin-bottom: 20px;
+    padding: 15px;
     background-color: white;
-    padding: 20px;
     border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-    margin-bottom: 30px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .search-form {
@@ -163,7 +230,7 @@ body {
 
 .search-form input {
     flex: 1;
-    padding: 10px;
+    padding: 8px;
     border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 16px;
@@ -172,11 +239,11 @@ body {
 .search-btn {
     background-color: #4CAF50;
     color: white;
-    padding: 10px 20px;
+    padding: 8px 16px;
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 14px;
 }
 
 .search-btn:hover {
@@ -197,19 +264,127 @@ body {
     margin: 0 auto;
 }
 
-.select-user {
-    width: 100%;
-    padding: 10px;
+.input-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.input-group input {
+    flex: 1;
+    padding: 12px;
     border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 16px;
-    margin-bottom: 20px;
+}
+
+.input-group input:focus {
+    outline: none;
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 0.5px rgba(76, 175, 80, 0.2);
+}
+
+.btn-search {
+    background-color: #4CAF50;
+    color: white;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.3s ease;
+}
+
+.btn-search:hover {
+    background-color: #45a049;
+    transform: translateY(-1px);
+}
+
+.btn-search:active {
+    transform: translateY(0);
+}
+
+.user-info {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    padding: 15px;
+    margin: 15px 0;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.user-info p {
+    margin: 0;
+    color: #495057;
+    font-size: 16px;
+}
+
+.user-info span {
+    font-weight: bold;
+    color: #212529;
+}
+
+.form-control {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+    font-size: 14px;
+}
+
+select.form-control {
+    display: block;
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #333;
+    background-color: #fff;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M10.293 3.293L6 7.586 1.707 3.293A1 1 0 00.293 4.707l5 5a1 1 0 001.414 0l5-5a1 1 0 10-1.414-1.414z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    height: 40px;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    cursor: pointer;
+}
+
+.form-group select.form-control:focus {
+    border-color: #4CAF50;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(76, 175, 80, 0.25);
+}
+
+.form-group select.form-control:hover {
+    border-color: #999;
+}
+
+.form-group select.form-control option {
+    padding: 12px;
+    background-color: #fff;
+    color: #333;
+    font-size: 14px;
+}
+
+/* Estilo específico para el campo de categoría */
+#categoria {
+    font-weight: normal;
+    text-transform: capitalize;
+    letter-spacing: 0.2px;
 }
 
 .form-actions {
     display: flex;
     gap: 10px;
     justify-content: center;
+    margin-top: 20px;
 }
 
 .email-btn {
@@ -223,6 +398,9 @@ body {
 .action-buttons {
     margin-top: 20px;
     text-align: center;
+    display: flex;
+    gap: 15px;
+    justify-content: center;
 }
 
 .action-btn {
@@ -232,6 +410,7 @@ body {
     border-radius: 4px;
     font-size: 16px;
     transition: all 0.3s ease;
+    min-width: 150px;
 }
 
 .generate-bill {
@@ -241,6 +420,16 @@ body {
 
 .generate-bill:hover {
     background-color: #45a049;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.modify-user {
+    background-color: #2196F3;
+    color: white;
+}
+
+.modify-user:hover {
+    background-color: #1976D2;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
@@ -283,4 +472,541 @@ body {
     padding: 0 15px;
     color: #666;
     font-size: 14px;
+}
+
+.btn-historico {
+    display: inline-block;
+    padding: 6px 12px;
+    background-color: #007bff;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+}
+
+.btn-historico:hover {
+    background-color: #0056b3;
+}
+
+.modificar-form {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.modificar-form .form-group {
+    margin-bottom: 20px;
+}
+
+.modificar-form label {
+    display: block;
+    margin-bottom: 8px;
+    color: #333;
+    font-weight: 500;
+}
+
+.modificar-form .form-control {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+    transition: border-color 0.3s ease;
+}
+
+.modificar-form .form-control:focus {
+    outline: none;
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 0.5px rgba(76, 175, 80, 0.2);
+}
+
+.modificar-form .form-actions {
+    margin-top: 30px;
+    text-align: center;
+}
+
+.modificar-form .submit-btn {
+    background-color: #4CAF50;
+    color: white;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.3s ease;
+}
+
+.modificar-form .submit-btn:hover {
+    background-color: #45a049;
+    transform: translateY(-1px);
+}
+
+.modificar-form .submit-btn:active {
+    transform: translateY(0);
+}
+
+.periodo-facturacion {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 15px;
+}
+
+.fecha-inicio, .fecha-fin {
+    flex: 1;
+}
+
+.fecha-inicio label, .fecha-fin label {
+    display: block;
+    margin-bottom: 5px;
+    color: #666;
+    font-size: 14px;
+}
+
+.periodo-facturacion input[type="date"] {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+/* Estilos para la sección de rutas */
+.ruta-container {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-top: 30px;
+}
+
+.ruta-container .titulo {
+    color: #333;
+    margin-bottom: 20px;
+    font-size: 1.5em;
+}
+
+.ruta-container .descripcion {
+    color: #666;
+    margin-bottom: 15px;
+}
+
+/* Mejoras para el sistema de drag and drop */
+.usuarios-lista {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px;
+    background: #fff;
+}
+
+.usuario-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    margin: 8px 0;
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    user-select: none;
+    cursor: grab;
+}
+
+.usuario-item:hover {
+    background-color: #f8f9fa;
+    transform: translateX(2px);
+}
+
+.usuario-item.dragging {
+    cursor: grabbing;
+    background-color: #f5f5f5;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transform: scale(1.02);
+    opacity: 0.9;
+}
+
+.usuario-item.drag-over {
+    border: 2px dashed #4CAF50;
+    padding: 11px;
+}
+
+.usuario-info {
+    flex-grow: 1;
+    padding: 0 10px;
+}
+
+/* Estilos para estados de carga */
+.loading {
+    position: relative;
+    cursor: wait !important;
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    top: 50%;
+    right: 10px;
+    margin-top: -10px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Mensajes de validación y feedback */
+.validation-message {
+    color: #dc3545;
+    font-size: 14px;
+    margin-top: 5px;
+    display: none;
+}
+
+.validation-message.show {
+    display: block;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Mejoras visuales para botones */
+.btn {
+    position: relative;
+    overflow: hidden;
+}
+
+.btn::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 5px;
+    height: 5px;
+    background: rgba(255, 255, 255, 0.5);
+    opacity: 0;
+    border-radius: 100%;
+    transform: scale(1, 1) translate(-50%);
+    transform-origin: 50% 50%;
+}
+
+.btn:focus:not(:active)::after {
+    animation: ripple 1s ease-out;
+}
+
+@keyframes ripple {
+    0% {
+        transform: scale(0, 0);
+        opacity: 0.5;
+    }
+    100% {
+        transform: scale(100, 100);
+        opacity: 0;
+    }
+}
+
+/* Estilos específicos para el menú de toma de lecturas */
+.nav-menu {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: white;
+    padding: 15px 20px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+.nav-menu .user-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.nav-menu .user-info span {
+    color: #666;
+    font-size: 14px;
+}
+
+.logout-btn {
+    display: inline-block;
+    padding: 8px 16px;
+    background-color: #dc3545;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: background-color 0.3s ease;
+}
+
+.logout-btn:hover {
+    background-color: #c82333;
+}
+
+/* Estilos para finalizar ruta */
+.finalizar-ruta {
+    margin-top: 20px;
+    text-align: center;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+}
+
+.btn-finalizar {
+    background-color: #28a745;
+    color: white;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-finalizar:hover {
+    background-color: #218838;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn-finalizar:active {
+    transform: translateY(0);
+}
+
+.ruta-finalizada {
+    background-color: #d4edda;
+    color: #155724;
+    padding: 15px;
+    border-radius: 4px;
+    margin: 15px 0;
+    text-align: center;
+    font-weight: bold;
+}
+
+/* Estilos para la sección de rutas en lista de usuarios */
+.rutas-info {
+    margin: 20px 0;
+    padding: 20px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.rutas-info h2 {
+    color: #333;
+    margin-bottom: 20px;
+}
+
+.ruta-estado {
+    margin: 15px 0;
+    padding: 20px;
+    border-radius: 8px;
+    transition: all 0.5s ease;
+}
+
+.ruta-detalles {
+    margin-top: 10px;
+}
+
+.estado-badge {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.estado-badge.activa {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeeba;
+}
+
+.estado-badge.finalizada {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.ruta-activa {
+    background-color: #fff8e6;
+    border: 1px solid #ffeeba;
+}
+
+.ruta-finalizada {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    opacity: 0.8;
+}
+
+.fade-out {
+    animation: fadeOut 1s ease-in-out;
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 0.8;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+}
+
+.progreso-ruta {
+    height: 8px;
+    background-color: #e9ecef;
+    border-radius: 4px;
+    margin: 10px 0;
+    overflow: hidden;
+}
+
+.progreso-barra {
+    height: 100%;
+    background-color: #28a745;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.ruta-finalizada .progreso-barra {
+    background-color: #6c757d;
+}
+
+.progreso-texto {
+    color: #495057;
+    font-size: 14px;
+    margin: 5px 0;
+}
+
+.fecha-finalizacion {
+    color: #6c757d;
+    font-size: 14px;
+    margin-top: 5px;
+}
+
+.header-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 40px;
+    background-color: white;
+    padding: 30px 50px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin: 30px auto;
+    max-width: 1100px;
+    min-height: 140px;
+}
+
+.header-container img {
+    height: 120px; /* Aumentado de 100px a 120px (20% más) */
+    width: auto;
+    object-fit: contain;
+}
+
+.header-container h1 {
+    margin: 0;
+    color: #0ec1ee;
+    font-size: 2.2em;
+    text-align: center;
+    flex-grow: 1;
+    padding-right: 120px; /* Para compensar el espacio del logo y mantener el título centrado */
+}
+
+.form-group select {
+    width: 100%;
+    padding: 10px;
+    border: 0.5px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    background-color: #fff;
+    color: #333;
+    height: 40px;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 16px;
+    padding-right: 35px;
+}
+
+.form-group select:focus {
+    border-color: #4CAF50;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
+}
+
+.form-group select:hover {
+    border-color: #999;
+}
+
+.form-group select option {
+    padding: 10px;
+    font-size: 14px;
+    background-color: #fff;
+    color: #333;
+}
+
+/* Agregar estilos para la sección de extras */
+.section-divider {
+    margin: 30px 0 20px;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 10px;
+}
+
+.section-divider h3 {
+    color: #0ec1ee;
+    font-size: 1.3em;
+    margin: 0;
+}
+
+.input-group {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.currency-symbol {
+    position: absolute;
+    left: 10px;
+    color: #666;
+    z-index: 1;
+}
+
+.currency-input {
+    padding-left: 25px !important;
+}
+
+textarea.form-control {
+    resize: vertical;
+    min-height: 80px;
+}
+
+/* Estilos para los campos de moneda */
+input[type="number"].currency-input {
+    text-align: right;
+    padding-right: 10px;
 }

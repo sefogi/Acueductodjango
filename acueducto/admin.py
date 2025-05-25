@@ -1,9 +1,11 @@
 from django.contrib import admin
 from django import forms
-from .models import UserAcueducto
+from .models import UserAcueducto, HistoricoLectura
 
-class UserAcueductoForm(forms.ModelForm):
-    date = forms.DateField(
+# This local form might be redundant if the main UserAcueductoForm from forms.py is sufficient.
+# For now, let's update it as per the field rename.
+class UserAcueductoAdminForm(forms.ModelForm): # Renamed for clarity, or could be removed
+    fecha_ultima_lectura = forms.DateField(
         widget=forms.DateInput(attrs={'type': 'date'}),
         required=False
     )
@@ -14,10 +16,10 @@ class UserAcueductoForm(forms.ModelForm):
 
 @admin.register(UserAcueducto)
 class UsersAcueductoAdmin(admin.ModelAdmin):
-    form = UserAcueductoForm
+    form = UserAcueductoAdminForm # Use the updated form name if changed
     list_display = [
         'contrato',
-        'date',
+        'fecha_ultima_lectura', # Renamed from date
         'name',
         'lastname',
         'email',
@@ -36,7 +38,7 @@ class UsersAcueductoAdmin(admin.ModelAdmin):
     ]
     list_filter = [
         'contrato',
-        'date',
+        'fecha_ultima_lectura', # Renamed from date
         'name',
         'lastname',
         'email',
@@ -44,6 +46,12 @@ class UsersAcueductoAdmin(admin.ModelAdmin):
         'address',
         'lectura'
     ]
+
+@admin.register(HistoricoLectura)
+class HistoricoLecturaAdmin(admin.ModelAdmin):
+    list_display = ('usuario', 'fecha_lectura', 'lectura')
+    list_filter = ('fecha_lectura',)
+    search_fields = ('usuario__contrato', 'usuario__name')
 
 
 

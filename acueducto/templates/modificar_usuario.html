@@ -1,0 +1,73 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Modificar Usuario</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+</head>
+<body>
+    <div class="container">
+        <nav class="nav-menu">
+            <a href="{% url 'index' %}">Crear Usuario</a>
+            <a href="{% url 'modificar_usuario' %}" class="active">Modificar Usuario</a>
+            <a href="{% url 'lista_usuarios' %}">Lista de Usuarios</a>
+            <a href="{% url 'generar_factura' %}">Generar Factura</a>
+            
+        </nav>
+
+        <div class="header-container">
+            <img src="{% static 'images/akualogo.webp' %}" alt="Akua Logo">
+            <h1>Modificar Usuario</h1>
+        </div>
+
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="message {{ message.tags }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="form-container">
+            <form method="GET" class="buscar-form" id="buscarUsuarioForm">
+                <div class="form-group">
+                    <label for="buscar_contrato">Buscar por Número de Contrato:</label>
+                    <div class="input-group">
+                        <input type="text" 
+                               id="buscar_contrato" 
+                               name="contrato" 
+                               placeholder="Ingrese número de contrato"
+                               pattern="[0-9]+"
+                               title="Por favor ingrese solo números"
+                               class="form-control"
+                               value="{{ contrato_busqueda }}">
+                        <button type="submit" class="btn-search">Buscar</button>
+                    </div>
+                </div>
+            </form>
+
+            {% if usuario and form %}
+            <h3>Editando Usuario: {{ usuario.name }} {{ usuario.lastname }} (Contrato: {{ usuario.contrato }})</h3>
+            <form method="POST" class="modificar-form" id="modificarForm">
+                {% csrf_token %}
+                {# This hidden input is crucial for POST to identify the user since 'contrato' in form is disabled #}
+                <input type="hidden" name="contrato" value="{{ usuario.contrato }}">
+                
+                {{ form.as_p }}
+                
+                <div class="form-actions">
+                    <button type="submit" name="actualizar" class="submit-btn">Actualizar Usuario</button>
+                </div>
+            </form>
+            {% elif contrato_busqueda %} 
+                {# This case handles when a search was made but no user was found, message is shown via messages framework #}
+                <p>Revise el número de contrato e intente de nuevo.</p>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
