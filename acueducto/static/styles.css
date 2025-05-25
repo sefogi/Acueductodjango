@@ -90,12 +90,13 @@ body {
 .form-group input,
 .form-group select {
     width: 100%;
-    padding: 10px;
+    padding: 12px; /* Increased padding */
     border: 0.5px solid #ddd;
     border-radius: 4px;
-    font-size: 14px;
+    font-size: 16px; /* Increased font size */
     transition: border-color 0.3s ease;
     background-color: #fff;
+    box-sizing: border-box; /* Added box-sizing */
 }
 
 /* Grupos específicos para el layout */
@@ -337,8 +338,8 @@ body {
 select.form-control {
     display: block;
     width: 100%;
-    padding: 8px 12px;
-    font-size: 14px;
+    padding: 12px; /* Increased padding */
+    font-size: 16px; /* Increased font size */
     line-height: 1.5;
     color: #333;
     background-color: #fff;
@@ -351,9 +352,10 @@ select.form-control {
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
-    height: 40px;
+    height: auto; /* Changed height to auto */
     transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
     cursor: pointer;
+    box-sizing: border-box; /* Added box-sizing */
 }
 
 .form-group select.form-control:focus {

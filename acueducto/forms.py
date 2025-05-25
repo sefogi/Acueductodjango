@@ -17,7 +17,8 @@ class UserAcueductoForm(forms.ModelForm):
             'credito', 
             'credito_descripcion', 
             'otros_gastos_valor', 
-            'otros_gastos_descripcion'
+            'otros_gastos_descripcion',
+            'lectura', # Added lectura field
         ]
         labels = {
             'contrato': 'Número de Contrato',
@@ -33,11 +34,13 @@ class UserAcueductoForm(forms.ModelForm):
             'credito_descripcion': 'Descripción del Crédito',
             'otros_gastos_valor': 'Valor de Otros Gastos',
             'otros_gastos_descripcion': 'Descripción de Otros Gastos',
+            'lectura': 'Lectura Actual', # Added lectura label
         }
         widgets = {
             'fecha_ultima_lectura': forms.DateInput(attrs={'type': 'date'}), # Renamed from 'date'
             'credito_descripcion': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Descripción del crédito'}),
             'otros_gastos_descripcion': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Descripción de otros gastos'}),
+            'lectura': forms.NumberInput(attrs={'placeholder': 'Valor numérico del medidor'}), # Added lectura widget
         }
 
     def __init__(self, *args, **kwargs):
@@ -49,6 +52,7 @@ class UserAcueductoForm(forms.ModelForm):
         self.fields['otros_gastos_descripcion'].required = False
         self.fields['phone'].required = False # Assuming phone can be optional
         self.fields['email'].required = False # Assuming email can be optional
+        self.fields['lectura'].required = False # Made lectura optional
 
         # If instance is provided, it's an update, so disable 'contrato'
         if self.instance and self.instance.pk:

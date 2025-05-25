@@ -109,6 +109,25 @@ def generar_pdf_factura(usuario, fecha_emision, periodo_facturacion, base_url):
     if len(historico_lecturas) > 1:
         lectura_anterior = historico_lecturas[1]
     
+    # Determine consumo_m3
+    consumo_m3 = 0
+    if lectura_anterior and usuario.lectura is not None and lectura_anterior.lectura is not None:
+        consumo_m3 = usuario.lectura - lectura_anterior.lectura
+    elif usuario.lectura is not None:
+        consumo_m3 = usuario.lectura
+    else:
+        consumo_m3 = 0
+
+    valor_por_m3 = 1000
+    costo_consumo_raw = consumo_m3 * valor_por_m3
+    costo_consumo_agua_redondeado = round(costo_consumo_raw)
+
+    credito = usuario.credito if usuario.credito is not None else 0
+    otros_gastos = usuario.otros_gastos_valor if usuario.otros_gastos_valor is not None else 0
+
+    total_factura_raw = costo_consumo_agua_redondeado + float(credito) + float(otros_gastos)
+    total_factura_redondeado = round(total_factura_raw)
+
     template = get_template('factura_template.html')
     context = {
         'usuario': usuario,
@@ -116,6 +135,8 @@ def generar_pdf_factura(usuario, fecha_emision, periodo_facturacion, base_url):
         'lectura_anterior': lectura_anterior,
         'fecha_emision': fecha_emision,
         'periodo_facturacion': periodo_facturacion,
+        'costo_consumo_agua_redondeado': costo_consumo_agua_redondeado,
+        'total_factura_redondeado': total_factura_redondeado,
     }
     html = template.render(context)
     
