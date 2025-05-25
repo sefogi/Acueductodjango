@@ -300,6 +300,7 @@ def buscar_usuario_por_contrato(request):
             return JsonResponse({'found': False})
     return JsonResponse({'found': False})
 
+
 def login_view(request):
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -318,7 +319,7 @@ def logout_view(request):
 
 @login_required(login_url='login')
 def toma_lectura(request):
-    # mensaje = None # Replaced by Django messages
+    
     usuario = None
     historico = None
     ruta = None # Initialize ruta

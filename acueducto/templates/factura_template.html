@@ -159,10 +159,12 @@
                     </td>
                     <td class="info-cell">
                         <div class="empresa-info">
-                            <h1 class="factura-titulo">Factura del Acueducto</h1>
+                            <h1 class="factura-titulo">Factura del Acueducto La Marina Valle</h1>
                             <p class="factura-numero">Factura N°: {{ usuario.contrato }}-{{ fecha_emision|date:"Ymd" }}</p>
+                            <p class="factura-numero">Numero de medidor: {{ usuario.numero_de_medidor }}</p>
                             <p>Fecha de Emisión: {{ fecha_emision|fecha_espanol }}</p>
                             <p class="periodo-facturacion"><strong>Período de Facturación:</strong><br>{{ periodo_facturacion }}</p>
+                            
                         </div>
                     </td>
                     <td class="contrato-cell">
