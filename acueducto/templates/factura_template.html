@@ -217,20 +217,28 @@
                         {% endif %}
                     </td>
                     <td>$1.000 por unidad</td>
-                    <td>${{ usuario.lectura|floatformat:3|default:"0" }}</td>
+                    <td>{{ usuario.lectura|format_cop:3 }}</td>
                 </tr>
                 {% if usuario.credito %}
                 <tr class="extras-row">
                     <td>Crédito</td>
                     <td colspan="2">{{ usuario.credito_descripcion|default:"Saldo pendiente" }}</td>
+<<<<<<< HEAD
                     <td>${{ usuario.credito|floatformat:4 }}</td>
+=======
+                    <td>{{ usuario.credito|format_cop:2 }}</td>
+>>>>>>> refs/remotes/origin/master
                 </tr>
                 {% endif %}
                 {% if usuario.otros_gastos_valor %}
                 <tr class="extras-row">
                     <td>Otros Gastos</td>
                     <td colspan="2">{{ usuario.otros_gastos_descripcion }}</td>
+<<<<<<< HEAD
                     <td>${{ usuario.otros_gastos_valor|floatformat:3 }}</td>
+=======
+                    <td>{{ usuario.otros_gastos_valor|format_cop:2 }}</td>
+>>>>>>> refs/remotes/origin/master
                 </tr>
                 {% endif %}
             </tbody>
@@ -238,7 +246,7 @@
 
         <div class="total">
             {% with total=usuario.lectura|add:usuario.credito|add:usuario.otros_gastos_valor %}
-            Total a Pagar: ${{ total|floatformat:3 }}
+            Total a Pagar: {{ total|format_cop:3 }}
             {% endwith %}
         </div>
 

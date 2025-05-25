@@ -1010,3 +1010,41 @@ input[type="number"].currency-input {
     text-align: right;
     padding-right: 10px;
 }
+
+.form-control-field,
+.form-control-select {
+    padding: 12px;
+    font-size: 16px;
+    box-sizing: border-box; 
+}
+
+/* Specifically for select to ensure height and arrow alignment */
+.form-control-select {
+    height: auto; /* Let padding and font-size determine height */
+}
+
+/* Targeting textareas specifically within the forms if they use form-control-field */
+.create-user-form .form-control-field[type="text"], 
+.create-user-form .form-control-field[type="number"],
+.create-user-form .form-control-field[type="email"],
+.create-user-form .form-control-field[type="password"],
+.create-user-form textarea.form-control-field,
+.modificar-form .form-control-field[type="text"],
+.modificar-form .form-control-field[type="number"],
+.modificar-form .form-control-field[type="email"],
+.modificar-form .form-control-field[type="password"],
+.modificar-form textarea.form-control-field {
+    padding: 12px;
+    font-size: 16px;
+    box-sizing: border-box;
+}
+
+.create-user-form textarea,
+.modificar-form textarea {
+    padding: 12px;
+    font-size: 16px;
+    box-sizing: border-box;
+    width: 100%; 
+    border: 0.5px solid #ddd; 
+    border-radius: 4px; 
+}

@@ -19,6 +19,21 @@ class UserAcueductoForm(forms.ModelForm):
             'otros_gastos_valor', 
             'otros_gastos_descripcion'
         ]
+        labels = {
+            'contrato': 'Número de Contrato',
+            'name': 'Nombres',
+            'lastname': 'Apellidos',
+            'email': 'Correo Electrónico',
+            'phone': 'Teléfono',
+            'address': 'Dirección',
+            'categoria': 'Categoría',
+            'zona': 'Zona',
+            'fecha_ultima_lectura': 'Fecha de Última Lectura',
+            'credito': 'Crédito Asignado',
+            'credito_descripcion': 'Descripción del Crédito',
+            'otros_gastos_valor': 'Valor de Otros Gastos',
+            'otros_gastos_descripcion': 'Descripción de Otros Gastos',
+        }
         widgets = {
             'fecha_ultima_lectura': forms.DateInput(attrs={'type': 'date'}), # Renamed from 'date'
             'credito_descripcion': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Descripción del crédito'}),
