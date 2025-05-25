@@ -137,6 +137,7 @@ def generar_pdf_factura(usuario, fecha_emision, periodo_facturacion, base_url):
         'periodo_facturacion': periodo_facturacion,
         'costo_consumo_agua_redondeado': costo_consumo_agua_redondeado,
         'total_factura_redondeado': total_factura_redondeado,
+        'valor_por_m3': valor_por_m3,
     }
     html = template.render(context)
     

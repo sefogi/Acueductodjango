@@ -19,6 +19,7 @@ class UsersAcueductoAdmin(admin.ModelAdmin):
     form = UserAcueductoAdminForm # Use the updated form name if changed
     list_display = [
         'contrato',
+        'numero_de_medidor',
         'fecha_ultima_lectura', # Renamed from date
         'name',
         'lastname',
@@ -29,6 +30,7 @@ class UsersAcueductoAdmin(admin.ModelAdmin):
     ]
     search_fields = [
         'contrato',
+        'numero_de_medidor',
         'name',
         'lastname',
         'email',

@@ -52,16 +52,60 @@
 
             {% if usuario and form %}
             <h3>Editando Usuario: {{ usuario.name }} {{ usuario.lastname }} (Contrato: {{ usuario.contrato }})</h3>
-            <form method="POST" class="modificar-form" id="modificarForm">
+            {# Apply create-user-form class to reuse its grid styling #}
+            <form method="POST" class="modificar-form create-user-form" id="modificarForm">
                 {% csrf_token %}
                 
                 <input type="hidden" name="contrato" value="{{ usuario.contrato }}">
+
+                {# Render contrato and numero_de_medidor side-by-side #}
+                <div class="form-group">
+                    <label for="{{ form.contrato.id_for_label }}">{{ form.contrato.label }}</label>
+                    {{ form.contrato }} {# This field will be disabled by the form class #}
+                    {% if form.contrato.help_text %}
+                        <small class="form-text text-muted">{{ form.contrato.help_text }}</small>
+                    {% endif %}
+                    {% for error in form.contrato.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.numero_de_medidor.id_for_label }}">{{ form.numero_de_medidor.label }}</label>
+                    {{ form.numero_de_medidor }}
+                    {% if form.numero_de_medidor.help_text %}
+                        <small class="form-text text-muted">{{ form.numero_de_medidor.help_text }}</small>
+                    {% endif %}
+                    {% for error in form.numero_de_medidor.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                {# Render other fields, ensuring they span correctly if needed or just flow #}
+                {% for field in form.visible_fields %}
+                    {% if field.name != "contrato" and field.name != "numero_de_medidor" %}
+                        <div class="form-group {% if field.field.widget.attrs.class == 'form-control-textarea' or field.name == 'credito_descripcion' or field.name == 'otros_gastos_descripcion' %}col-span-3{% elif field.name == 'address' %}col-span-2{% endif %}">
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.help_text %}
+                                <small class="form-text text-muted">{{ field.help_text }}</small>
+                            {% endif %}
+                            {% for error in field.errors %}
+                                <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endfor %}
                 
+
+                <div class="form-actions col-span-3">
+
 
                 
                 {{ form.as_p }}
                 
                 <div class="form-actions">
+
                     <button type="submit" name="actualizar" class="submit-btn">Actualizar Usuario</button>
                 </div>
             </form>
