@@ -223,14 +223,14 @@
                 <tr class="extras-row">
                     <td>Crédito</td>
                     <td colspan="2">{{ usuario.credito_descripcion|default:"Saldo pendiente" }}</td>
-                    <td>${{ usuario.credito|floatformat:2 }}</td>
+                    <td>${{ usuario.credito|floatformat:4 }}</td>
                 </tr>
                 {% endif %}
                 {% if usuario.otros_gastos_valor %}
                 <tr class="extras-row">
                     <td>Otros Gastos</td>
                     <td colspan="2">{{ usuario.otros_gastos_descripcion }}</td>
-                    <td>${{ usuario.otros_gastos_valor|floatformat:2 }}</td>
+                    <td>${{ usuario.otros_gastos_valor|floatformat:3 }}</td>
                 </tr>
                 {% endif %}
             </tbody>
