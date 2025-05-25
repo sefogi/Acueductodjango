@@ -549,55 +549,197 @@ class InvoiceGenerationTest(TestCase):
         elif self.user.lectura is not None:
             consumo_m3 = self.user.lectura
         
-        self.assertEqual(consumo_m3, 20.0) 
+        self.assertEqual(consumo_m3, 20.0) # This is for display (120 - 100)
 
-        valor_por_m3_expected = 1000 
-        costo_consumo_raw = consumo_m3 * valor_por_m3_expected
+        valor_por_m3_expected = 1000
+        # New logic: costo_consumo_raw is based on self.user.lectura directly
+        costo_consumo_raw = self.user.lectura * valor_por_m3_expected # 120.0 * 1000 = 120000
         costo_consumo_agua_redondeado_expected = round(costo_consumo_raw)
-        self.assertEqual(costo_consumo_agua_redondeado_expected, 20000)
+        self.assertEqual(costo_consumo_agua_redondeado_expected, 120000)
 
         credito = self.user.credito if self.user.credito is not None else Decimal('0')
         otros_gastos = self.user.otros_gastos_valor if self.user.otros_gastos_valor is not None else Decimal('0')
-        # Ensure all parts are Decimal for arithmetic if they come from model
+        
         total_factura_raw = Decimal(costo_consumo_agua_redondeado_expected) + credito + otros_gastos
         total_factura_redondeado_expected = round(total_factura_raw)
+        # Expected: 120000 (costo) + 50 (credito) + 10 (otros_gastos) = 120060
 
         context = {
             'usuario': self.user,
-            'historico_lecturas': historico_lecturas[:6], 
+            'historico_lecturas': historico_lecturas[:6],
             'lectura_anterior': lectura_anterior_obj,
             'fecha_emision': timezone.now(),
             'periodo_facturacion': "Test Period",
             'costo_consumo_agua_redondeado': costo_consumo_agua_redondeado_expected,
             'total_factura_redondeado': total_factura_redondeado_expected,
             'valor_por_m3': valor_por_m3_expected,
+            # consumo_m3 is also in context for display
+            'consumo_m3': consumo_m3,
         }
 
         self.assertEqual(context['valor_por_m3'], valor_por_m3_expected)
-        self.assertEqual(context['costo_consumo_agua_redondeado'], 20000)
-        self.assertEqual(context['total_factura_redondeado'], 20060) 
+        self.assertEqual(context['costo_consumo_agua_redondeado'], 120000)
+        self.assertEqual(context['total_factura_redondeado'], 120060)
+        self.assertEqual(context['consumo_m3'], 20.0)
+
+
+    def test_invoice_calculation_with_previous_reading_new_logic(self):
+        user = UserAcueducto.objects.create(
+            contrato='INV002', name='Test User 2', lastname='WithPrev',
+            email='test2@example.com', numero_de_medidor='MEDINV002',
+            lectura=150.0, # Current actual reading
+            credito=Decimal('20.00'),
+            otros_gastos_valor=Decimal('5.00')
+        )
+        # Historical readings
+        HistoricoLectura.objects.create(usuario=user, fecha_lectura=timezone.now() - timezone.timedelta(days=60), lectura=80.0) # Older
+        HistoricoLectura.objects.create(usuario=user, fecha_lectura=timezone.now() - timezone.timedelta(days=30), lectura=110.0) # Previous
+        HistoricoLectura.objects.create(usuario=user, fecha_lectura=timezone.now(), lectura=150.0) # Current historical entry
+
+        # Simulate context building as in generar_pdf_factura
+        historico_lecturas = user.lecturas.all().order_by('-fecha_lectura')
+        lectura_anterior_obj = None
+        if len(historico_lecturas) > 1:
+            lectura_anterior_obj = historico_lecturas[1] # This should be 110.0
+
+        # For display:
+        consumo_m3_display = 0
+        if lectura_anterior_obj and user.lectura is not None and lectura_anterior_obj.lectura is not None:
+            consumo_m3_display = user.lectura - lectura_anterior_obj.lectura # 150.0 - 110.0 = 40.0
+        elif user.lectura is not None:
+            consumo_m3_display = user.lectura
+        
+        valor_por_m3 = 1000
+
+        # For billing (new logic):
+        expected_costo_consumo_raw = 0
+        if user.lectura is not None:
+            expected_costo_consumo_raw = user.lectura * valor_por_m3 # 150.0 * 1000 = 150000
+        
+        expected_costo_consumo_agua_redondeado = round(expected_costo_consumo_raw)
+
+        credito = user.credito if user.credito is not None else Decimal('0')
+        otros_gastos = user.otros_gastos_valor if user.otros_gastos_valor is not None else Decimal('0')
+        
+        expected_total_factura_raw = Decimal(expected_costo_consumo_agua_redondeado) + credito + otros_gastos
+        expected_total_factura_redondeado = round(expected_total_factura_raw)
+        # 150000 + 20 (credito) + 5 (otros) = 150025
+
+        self.assertEqual(consumo_m3_display, 40.0)
+        self.assertEqual(expected_costo_consumo_agua_redondeado, 150000)
+        self.assertEqual(expected_total_factura_redondeado, 150025)
+        self.assertIsNotNone(lectura_anterior_obj)
+        if lectura_anterior_obj: # make mypy happy
+             self.assertEqual(lectura_anterior_obj.lectura, 110.0)
+
+
+    def test_invoice_calculation_no_previous_reading_new_logic(self):
+        user = UserAcueducto.objects.create(
+            contrato='INV003', name='Test User 3', lastname='NoPrev',
+            email='test3@example.com', numero_de_medidor='MEDINV003',
+            lectura=70.0, # Current actual reading
+            credito=Decimal('10.00'),
+            otros_gastos_valor=Decimal('2.00')
+        )
+        # Only one historical reading (current)
+        HistoricoLectura.objects.create(usuario=user, fecha_lectura=timezone.now(), lectura=70.0)
+
+        # Simulate context building as in generar_pdf_factura
+        historico_lecturas = user.lecturas.all().order_by('-fecha_lectura')
+        lectura_anterior_obj = None
+        if len(historico_lecturas) > 1: # This will be false
+            lectura_anterior_obj = historico_lecturas[1]
+
+        # For display:
+        consumo_m3_display = 0
+        if lectura_anterior_obj and user.lectura is not None and lectura_anterior_obj.lectura is not None:
+            consumo_m3_display = user.lectura - lectura_anterior_obj.lectura 
+        elif user.lectura is not None: # This path will be taken
+            consumo_m3_display = user.lectura # Should be 70.0
+        
+        valor_por_m3 = 1000
+
+        # For billing (new logic):
+        expected_costo_consumo_raw = 0
+        if user.lectura is not None:
+            expected_costo_consumo_raw = user.lectura * valor_por_m3 # 70.0 * 1000 = 70000
+            
+        expected_costo_consumo_agua_redondeado = round(expected_costo_consumo_raw)
+
+        credito = user.credito if user.credito is not None else Decimal('0')
+        otros_gastos = user.otros_gastos_valor if user.otros_gastos_valor is not None else Decimal('0')
+        
+        expected_total_factura_raw = Decimal(expected_costo_consumo_agua_redondeado) + credito + otros_gastos
+        expected_total_factura_redondeado = round(expected_total_factura_raw)
+        # 70000 + 10 (credito) + 2 (otros) = 70012
+
+        self.assertEqual(consumo_m3_display, 70.0)
+        self.assertEqual(expected_costo_consumo_agua_redondeado, 70000)
+        self.assertEqual(expected_total_factura_redondeado, 70012)
+        self.assertIsNone(lectura_anterior_obj)
 
 
     def test_invoice_template_renders_dynamic_valor_unitario(self):
-        valor_por_m3_test = 1200 
-        costo_consumo_test = 24000 
+        # This test might need adjustment if its setup relied on the old consumption calculation
+        # For now, assuming it tests template rendering with given context values, it might still be valid.
+        # Let's re-verify its assumptions based on the new logic.
+        # The key is that `costo_consumo_test` and `valor_por_m3_test` are passed directly in context.
         
+        # If self.user (created in setUp) is used, its lectura is 120.0
+        # If mock_lectura_anterior.lectura (100.0) is used for consumption diff, it's 20.
+        # The test passes `costo_consumo_test = 24000` and `valor_por_m3_test = 1200`.
+        # If this test is purely about template rendering these *given* values, it's fine.
+        # However, the HTML assertion "$24.000" implies this value is used for cost_consumo_agua_redondeado.
+        # And "$1.200 por unidad" implies valor_por_m3.
+
+        # Let's ensure the user for this test also aligns with how values are derived or make it self-contained.
+        # Using self.user from setUp.
+        # self.user.lectura = 120.0
+        # self.user.credito = 50.00
+        # self.user.otros_gastos_valor = 10.00
+        
+        valor_por_m3_test = 1200
+        
+        # Under new logic, cost_consumo_raw would be user.lectura * valor_por_m3_test
+        # costo_consumo_raw_calculated = self.user.lectura * valor_por_m3_test # 120.0 * 1200 = 144000
+        # costo_consumo_test_redondeado_calculated = round(costo_consumo_raw_calculated) # 144000
+
+        # The test provides `costo_consumo_test = 24000` directly to the template context.
+        # This test is more about whether the template *displays* the numbers passed in `context_data` correctly formatted,
+        # rather than if those numbers were calculated correctly according to business logic (other tests cover that).
+        # So, the existing structure of this specific test should be fine.
+
         mock_lectura_actual = HistoricoLectura(usuario=self.user, fecha_lectura=timezone.now(), lectura=120.0)
-        mock_lectura_anterior = HistoricoLectura(usuario=self.user, fecha_lectura=timezone.now() - timezone.timedelta(days=30), lectura=100.0)
+        mock_lectura_anterior = HistoricoLectura(usuario=self.user, fecha_lectura=timezone.now() - timezone.timedelta(days=30), lectura=100.0) # Display consumption: 20
+
+        # This context is what's passed to the template.
+        # The test asserts if the template renders these values, not how they are derived.
+        costo_consumo_test_for_template = 24000 # This is an arbitrary value for testing template rendering.
+        total_factura_for_template = Decimal(costo_consumo_test_for_template) + \
+                                     (self.user.credito or Decimal(0)) + \
+                                     (self.user.otros_gastos_valor or Decimal(0))
+                                     # 24000 + 50 + 10 = 24060
 
         context_data = {
-            'usuario': self.user, 
-            'historico_lecturas': [mock_lectura_actual, mock_lectura_anterior], 
+            'usuario': self.user,
+            'historico_lecturas': [mock_lectura_actual, mock_lectura_anterior],
             'lectura_anterior': mock_lectura_anterior,
             'fecha_emision': timezone.now(),
             'periodo_facturacion': 'Período de Prueba',
-            'valor_por_m3': valor_por_m3_test,
-            'costo_consumo_agua_redondeado': costo_consumo_test,
-            'total_factura_redondeado': Decimal(costo_consumo_test) + (self.user.credito or Decimal(0)) + (self.user.otros_gastos_valor or Decimal(0))
+            'valor_por_m3': valor_por_m3_test, # 1200
+            'costo_consumo_agua_redondeado': costo_consumo_test_for_template, # 24000
+            'total_factura_redondeado': total_factura_for_template # 24060
+            # 'consumo_m3' would be needed if template displays it. Assuming it does:
+            # consumo_m3_display_for_template = mock_lectura_actual.lectura - mock_lectura_anterior.lectura if mock_lectura_actual and mock_lectura_anterior else 0
+            # context_data['consumo_m3'] = consumo_m3_display_for_template # 20
         }
         
         template = get_template('factura_template.html')
         html_output = template.render(context_data)
 
-        self.assertIn("$1.200 por unidad", html_output)
-        self.assertIn("$24.000", html_output)
+        self.assertIn("$1.200 por unidad", html_output) # Checks formatting of valor_por_m3
+        self.assertIn("$24.000", html_output) # Checks formatting of costo_consumo_agua_redondeado
+        # Add assertion for total if it's displayed and formatted
+        # Example: self.assertIn("$24.060", html_output) # Check formatting of total_factura_redondeado
+        # This depends on the exact output of format_cop filter and if total is shown this way.
+        # For now, keeping original assertions for valor_por_m3 and costo_consumo.
