@@ -55,7 +55,7 @@
             {# Apply create-user-form class to reuse its grid styling #}
             <form method="POST" class="modificar-form create-user-form" id="modificarForm">
                 {% csrf_token %}
-                {# This hidden input is crucial for POST to identify the user since 'contrato' in form is disabled #}
+                
                 <input type="hidden" name="contrato" value="{{ usuario.contrato }}">
 
                 {# Render contrato and numero_de_medidor side-by-side #}
@@ -97,12 +97,20 @@
                     {% endif %}
                 {% endfor %}
                 
+
                 <div class="form-actions col-span-3">
+
+
+                
+                {{ form.as_p }}
+                
+                <div class="form-actions">
+
                     <button type="submit" name="actualizar" class="submit-btn">Actualizar Usuario</button>
                 </div>
             </form>
             {% elif contrato_busqueda %} 
-                {# This case handles when a search was made but no user was found, message is shown via messages framework #}
+                
                 <p>Revise el número de contrato e intente de nuevo.</p>
             {% endif %}
         </div>

@@ -216,8 +216,11 @@
                         </div>
                         {% endif %}
                     </td>
+
                     <td>{{ valor_por_m3|format_cop:0 }} por unidad</td>
                     <td>{{ costo_consumo_agua_redondeado|format_cop:0 }}</td>
+
+
                 </tr>
                 {% if usuario.credito %}
                 <tr class="extras-row">
