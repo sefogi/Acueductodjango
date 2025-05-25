@@ -5,7 +5,8 @@ class UserAcueductoForm(forms.ModelForm):
     class Meta:
         model = UserAcueducto
         fields = [
-            'contrato', 
+            'contrato',
+            'numero_de_medidor',
             'name', 
             'lastname', 
             'email', 
@@ -22,6 +23,7 @@ class UserAcueductoForm(forms.ModelForm):
         ]
         labels = {
             'contrato': 'Número de Contrato',
+            'numero_de_medidor': 'Número de Medidor',
             'name': 'Nombres',
             'lastname': 'Apellidos',
             'email': 'Correo Electrónico',
@@ -41,6 +43,7 @@ class UserAcueductoForm(forms.ModelForm):
             'credito_descripcion': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Descripción del crédito'}),
             'otros_gastos_descripcion': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Descripción de otros gastos'}),
             'lectura': forms.NumberInput(attrs={'placeholder': 'Valor numérico del medidor'}), # Added lectura widget
+            'numero_de_medidor': forms.TextInput(attrs={'placeholder': 'Número del medidor'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -53,6 +56,7 @@ class UserAcueductoForm(forms.ModelForm):
         self.fields['phone'].required = False # Assuming phone can be optional
         self.fields['email'].required = False # Assuming email can be optional
         self.fields['lectura'].required = False # Made lectura optional
+        self.fields['numero_de_medidor'].required = True
 
         # If instance is provided, it's an update, so disable 'contrato'
         if self.instance and self.instance.pk:
@@ -61,6 +65,7 @@ class UserAcueductoForm(forms.ModelForm):
 
         # Add placeholders
         self.fields['contrato'].widget.attrs.update({'placeholder': 'Número de Contrato'})
+        self.fields['numero_de_medidor'].widget.attrs.update({'placeholder': 'Número del medidor'})
         self.fields['name'].widget.attrs.update({'placeholder': 'Nombres'})
         self.fields['lastname'].widget.attrs.update({'placeholder': 'Apellidos'})
         self.fields['email'].widget.attrs.update({'placeholder': 'correo@ejemplo.com'})

@@ -37,8 +37,47 @@
         <div class="form-container">
             <form method="POST" class="create-user-form">
                 {% csrf_token %}
-                {{ form.as_p }}
-                <button type="submit" class="submit-btn">Crear Usuario</button>
+                
+                {# Render contrato and numero_de_medidor side-by-side #}
+                <div class="form-group">
+                    <label for="{{ form.contrato.id_for_label }}">{{ form.contrato.label }}</label>
+                    {{ form.contrato }}
+                    {% if form.contrato.help_text %}
+                        <small class="form-text text-muted">{{ form.contrato.help_text }}</small>
+                    {% endif %}
+                    {% for error in form.contrato.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.numero_de_medidor.id_for_label }}">{{ form.numero_de_medidor.label }}</label>
+                    {{ form.numero_de_medidor }}
+                    {% if form.numero_de_medidor.help_text %}
+                        <small class="form-text text-muted">{{ form.numero_de_medidor.help_text }}</small>
+                    {% endif %}
+                    {% for error in form.numero_de_medidor.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                {# Render other fields, ensuring they span correctly if needed or just flow #}
+                {% for field in form.visible_fields %}
+                    {% if field.name != "contrato" and field.name != "numero_de_medidor" %}
+                        <div class="form-group {% if field.field.widget.attrs.class == 'form-control-textarea' or field.name == 'credito_descripcion' or field.name == 'otros_gastos_descripcion' %}col-span-3{% elif field.name == 'address' %}col-span-2{% endif %}">
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.help_text %}
+                                <small class="form-text text-muted">{{ field.help_text }}</small>
+                            {% endif %}
+                            {% for error in field.errors %}
+                                <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+                
+                <button type="submit" class="submit-btn col-span-3">Crear Usuario</button>
             </form>
         </div>
     </div>

@@ -61,9 +61,9 @@ def format_cop(value, decimal_places=2):
         integer_part_formatted = sign + integer_part_formatted
 
         if decimal_places > 0 and decimal_part_str:
-            return f"$ {integer_part_formatted},{decimal_part_str}"  # Colombian decimal separator
+            return f"${integer_part_formatted},{decimal_part_str}"  # Colombian decimal separator
         else:
-            return f"$ {integer_part_formatted}"
+            return f"${integer_part_formatted}"
             
     except (ValueError, TypeError):
         # Fallback for any unexpected error during formatting
