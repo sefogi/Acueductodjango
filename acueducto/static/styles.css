@@ -90,13 +90,12 @@ body {
 .form-group input,
 .form-group select {
     width: 100%;
-    padding: 12px; /* Increased padding */
+    padding: 10px;
     border: 0.5px solid #ddd;
     border-radius: 4px;
-    font-size: 16px; /* Increased font size */
+    font-size: 14px;
     transition: border-color 0.3s ease;
     background-color: #fff;
-    box-sizing: border-box; /* Added box-sizing */
 }
 
 /* Grupos específicos para el layout */
@@ -338,8 +337,8 @@ body {
 select.form-control {
     display: block;
     width: 100%;
-    padding: 12px; /* Increased padding */
-    font-size: 16px; /* Increased font size */
+    padding: 8px 12px;
+    font-size: 14px;
     line-height: 1.5;
     color: #333;
     background-color: #fff;
@@ -352,10 +351,9 @@ select.form-control {
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
-    height: auto; /* Changed height to auto */
+    height: 40px;
     transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
     cursor: pointer;
-    box-sizing: border-box; /* Added box-sizing */
 }
 
 .form-group select.form-control:focus {
@@ -492,8 +490,8 @@ select.form-control {
 }
 
 .modificar-form {
-    max-width: 600px;
-    margin: 0 auto;
+    max-width: 1000px;
+    margin: 30px auto;
     padding: 20px;
 }
 
@@ -1011,42 +1009,4 @@ textarea.form-control {
 input[type="number"].currency-input {
     text-align: right;
     padding-right: 10px;
-}
-
-.form-control-field,
-.form-control-select {
-    padding: 12px;
-    font-size: 16px;
-    box-sizing: border-box; 
-}
-
-/* Specifically for select to ensure height and arrow alignment */
-.form-control-select {
-    height: auto; /* Let padding and font-size determine height */
-}
-
-/* Targeting textareas specifically within the forms if they use form-control-field */
-.create-user-form .form-control-field[type="text"], 
-.create-user-form .form-control-field[type="number"],
-.create-user-form .form-control-field[type="email"],
-.create-user-form .form-control-field[type="password"],
-.create-user-form textarea.form-control-field,
-.modificar-form .form-control-field[type="text"],
-.modificar-form .form-control-field[type="number"],
-.modificar-form .form-control-field[type="email"],
-.modificar-form .form-control-field[type="password"],
-.modificar-form textarea.form-control-field {
-    padding: 12px;
-    font-size: 16px;
-    box-sizing: border-box;
-}
-
-.create-user-form textarea,
-.modificar-form textarea {
-    padding: 12px;
-    font-size: 16px;
-    box-sizing: border-box;
-    width: 100%; 
-    border: 0.5px solid #ddd; 
-    border-radius: 4px; 
 }
