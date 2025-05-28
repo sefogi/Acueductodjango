@@ -743,3 +743,225 @@ class InvoiceGenerationTest(TestCase):
         # Example: self.assertIn("$24.060", html_output) # Check formatting of total_factura_redondeado
         # This depends on the exact output of format_cop filter and if total is shown this way.
         # For now, keeping original assertions for valor_por_m3 and costo_consumo.
+
+
+class ListaUsuariosViewTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.lista_usuarios_url = reverse('lista_usuarios')
+
+        # Create users with distinct zona, contrato, email, and address to isolate zona search
+        self.user_norte1 = UserAcueducto.objects.create(
+            contrato='ZN001', name='Usuario', lastname='NorteUno', 
+            email='norteuno@example.com', numero_de_medidor='MEDN1',
+            address='Calle Falsa 123', zona='ZonaNorte', categoria='Residencial'
+        )
+        self.user_sur1 = UserAcueducto.objects.create(
+            contrato='ZS001', name='Usuario', lastname='SurUno', 
+            email='suruno@example.com', numero_de_medidor='MEDS1',
+            address='Avenida Siempre Viva 456', zona='ZonaSur', categoria='Comercial'
+        )
+        self.user_norte2 = UserAcueducto.objects.create(
+            contrato='ZN002', name='Usuario', lastname='NorteDos', 
+            email='nortedos@example.com', numero_de_medidor='MEDN2',
+            address='Boulevard Inventado 789', zona='ZonaNorte', categoria='Residencial'
+        )
+        self.user_centro1 = UserAcueducto.objects.create(
+            contrato='ZC001', name='Usuario', lastname='CentroUno', 
+            email='centrouno@example.com', numero_de_medidor='MEDC1',
+            address='Plaza Principal 000', zona='ZonaCentro', categoria='Residencial'
+        )
+        # User for testing combined search (address contains a zona name)
+        self.user_conflicting_address = UserAcueducto.objects.create(
+            contrato='CX001', name='Conflicto', lastname='Dir',
+            email='conflictodir@example.com', numero_de_medidor='MEDCXA',
+            address='Urbanizacion ZonaNorteña', zona='ZonaOeste', categoria='Residencial'
+        )
+        # User for testing combined search (contrato contains a zona name)
+        self.user_conflicting_contrato = UserAcueducto.objects.create(
+            contrato='CONTRATO_ZonaSur_123', name='Conflicto', lastname='Cont',
+            email='conflictocont@example.com', numero_de_medidor='MEDCXC',
+            address='Calle Real 999', zona='ZonaEste', categoria='Residencial'
+        )
+
+
+    def test_search_by_full_zona_name(self):
+        response = self.client.get(self.lista_usuarios_url, {'busqueda': 'ZonaNorte'})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('usuarios', response.context)
+        usuarios_en_contexto = response.context['usuarios']
+        self.assertIn(self.user_norte1, usuarios_en_contexto)
+        self.assertIn(self.user_norte2, usuarios_en_contexto)
+        self.assertEqual(len(usuarios_en_contexto), 2)
+
+    def test_search_by_partial_zona_name(self):
+        response = self.client.get(self.lista_usuarios_url, {'busqueda': 'Nor'})
+        self.assertEqual(response.status_code, 200)
+        usuarios_en_contexto = response.context['usuarios']
+        self.assertIn(self.user_norte1, usuarios_en_contexto)
+        self.assertIn(self.user_norte2, usuarios_en_contexto)
+        # Also includes user_conflicting_address because 'ZonaNorteña' in address contains 'Nor'
+        self.assertIn(self.user_conflicting_address, usuarios_en_contexto)
+        self.assertEqual(len(usuarios_en_contexto), 3)
+
+    def test_search_by_non_existent_zona_name(self):
+        response = self.client.get(self.lista_usuarios_url, {'busqueda': 'ZonaInexistente'})
+        self.assertEqual(response.status_code, 200)
+        usuarios_en_contexto = response.context['usuarios']
+        self.assertEqual(len(usuarios_en_contexto), 0)
+
+    def test_search_by_zona_excludes_other_zonas(self):
+        response = self.client.get(self.lista_usuarios_url, {'busqueda': 'ZonaSur'})
+        self.assertEqual(response.status_code, 200)
+        usuarios_en_contexto = response.context['usuarios']
+        self.assertIn(self.user_sur1, usuarios_en_contexto)
+        self.assertNotIn(self.user_norte1, usuarios_en_contexto)
+        self.assertNotIn(self.user_norte2, usuarios_en_contexto)
+        self.assertNotIn(self.user_centro1, usuarios_en_contexto)
+        # This will also include self.user_conflicting_contrato due to 'ZonaSur' in its contrato
+        self.assertIn(self.user_conflicting_contrato, usuarios_en_contexto)
+        self.assertEqual(len(usuarios_en_contexto), 2)
+
+    def test_search_by_zona_also_matching_address_of_different_user(self):
+        # Search for 'ZonaNorte', should get user_norte1, user_norte2
+        # AND user_conflicting_address (because its address 'Urbanizacion ZonaNorteña' contains 'ZonaNorte')
+        response = self.client.get(self.lista_usuarios_url, {'busqueda': 'ZonaNorte'})
+        self.assertEqual(response.status_code, 200)
+        usuarios_en_contexto = response.context['usuarios']
+        self.assertIn(self.user_norte1, usuarios_en_contexto)
+        self.assertIn(self.user_norte2, usuarios_en_contexto)
+        self.assertIn(self.user_conflicting_address, usuarios_en_contexto) # Matches on address
+        self.assertEqual(len(usuarios_en_contexto), 3)
+
+    def test_search_by_zona_also_matching_contrato_of_different_user(self):
+        # Search for 'ZonaSur', should get user_sur1
+        # AND user_conflicting_contrato (because its contrato 'CONTRATO_ZonaSur_123' contains 'ZonaSur')
+        response = self.client.get(self.lista_usuarios_url, {'busqueda': 'ZonaSur'})
+        self.assertEqual(response.status_code, 200)
+        usuarios_en_contexto = response.context['usuarios']
+        self.assertIn(self.user_sur1, usuarios_en_contexto) # Matches on zona
+        self.assertIn(self.user_conflicting_contrato, usuarios_en_contexto) # Matches on contrato
+        self.assertEqual(len(usuarios_en_contexto), 2)
+
+    def test_search_by_address_not_matching_zona(self):
+        # Search for an address that is unique and not part of any zona name
+        response = self.client.get(self.lista_usuarios_url, {'busqueda': 'Calle Falsa 123'})
+        self.assertEqual(response.status_code, 200)
+        usuarios_en_contexto = response.context['usuarios']
+        self.assertIn(self.user_norte1, usuarios_en_contexto)
+        self.assertEqual(len(usuarios_en_contexto), 1)
+
+    def test_search_by_contrato_not_matching_zona(self):
+        # Search for a contrato that is unique and not part of any zona name
+        response = self.client.get(self.lista_usuarios_url, {'busqueda': 'ZC001'})
+        self.assertEqual(response.status_code, 200)
+        usuarios_en_contexto = response.context['usuarios']
+        self.assertIn(self.user_centro1, usuarios_en_contexto)
+        self.assertEqual(len(usuarios_en_contexto), 1)
+
+
+from unittest.mock import patch, MagicMock
+from datetime import datetime, timedelta # Ensure timedelta is also imported if used for date calculations
+
+# Assuming formatear_fecha_espanol is in .utils
+from .utils import formatear_fecha_espanol 
+
+class GenerarFacturaViewTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.generar_factura_url = reverse('generar_factura')
+        self.test_user = UserAcueducto.objects.create(
+            contrato="GFV001", 
+            name="FacturaTest", 
+            lastname="Usuario", 
+            email="facturatest@example.com",
+            numero_de_medidor="MEDGFV001", # Required non-null field
+            categoria='residencial',       # Required field with default
+            zona='TestZone',               # Required field
+            # Add any other fields that might be accessed directly or indirectly during invoice generation
+            lectura=150.0 # Example, might be relevant for context
+        )
+        # Ensure BASE_DIR is available for tests if not globally set in test settings
+        if not hasattr(settings, 'BASE_DIR'):
+            settings.BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+    @patch('acueducto.views.generar_pdf_factura')
+    def test_individual_factura_with_consecutivo(self, mock_generar_pdf):
+        # Configure the mock for the return value of generar_pdf_factura
+        # This function in views.py returns a tempfile.NamedTemporaryFile object
+        mock_temp_file = MagicMock()
+        mock_temp_file.name = "dummy_invoice.pdf" # Path to the dummy file
+        # The view then opens this file, so we need to ensure it can be "opened"
+        # However, for this test, we only care about the arguments to generar_pdf_factura
+        # The view logic:
+        # pdf_file = generar_factura_individual(...)
+        # with open(pdf_file.name, 'rb') as pdf:
+        # So, mock_generar_pdf.return_value.name needs to be set.
+        mock_generar_pdf.return_value = mock_temp_file
+
+        consecutivo_desde_val = "C001"
+        consecutivo_hasta_val = "C100"
+        
+        # Prepare dates for POST data
+        fecha_emision_str = timezone.now().strftime('%Y-%m-%d')
+        # Using different dates for period to make it more realistic
+        periodo_inicio_str = (timezone.now() - timedelta(days=30)).strftime('%Y-%m-%d') 
+        periodo_fin_str = timezone.now().strftime('%Y-%m-%d')
+
+        post_data = {
+            'contrato': self.test_user.contrato,
+            'fecha_emision': fecha_emision_str,
+            'periodo_inicio': periodo_inicio_str,
+            'periodo_fin': periodo_fin_str,
+            'consecutivo_desde': consecutivo_desde_val,
+            'consecutivo_hasta': consecutivo_hasta_val,
+            'descargar': 'Descargar Factura' # Simulating button press
+        }
+
+        response = self.client.post(self.generar_factura_url, data=post_data)
+
+        # Check response status (should be 200 for file download)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertTrue(response['Content-Disposition'].startswith('inline; filename="factura_'))
+
+        # Assert that generar_pdf_factura was called once
+        mock_generar_pdf.assert_called_once()
+
+        # Retrieve the arguments it was called with
+        # The mock is on `generar_pdf_factura` which is called by `generar_factura_individual`
+        _args, kwargs = mock_generar_pdf.call_args
+        
+        # --- Prepare expected arguments for assertion ---
+        expected_usuario = UserAcueducto.objects.get(contrato=self.test_user.contrato)
+        
+        # fecha_emision logic in generar_factura_individual:
+        # It receives the parsed date string or None. If None, defaults to timezone.now().
+        # If string is provided, it's parsed to datetime.datetime.
+        expected_fecha_emision_dt = datetime.strptime(fecha_emision_str, '%Y-%m-%d')
+        # The view passes this datetime object.
+
+        # periodo_facturacion logic:
+        periodo_inicio_dt = datetime.strptime(periodo_inicio_str, '%Y-%m-%d')
+        periodo_fin_dt = datetime.strptime(periodo_fin_str, '%Y-%m-%d')
+        expected_periodo_facturacion_str = f"Del {formatear_fecha_espanol(periodo_inicio_dt)} al {formatear_fecha_espanol(periodo_fin_dt)}"
+        
+        expected_base_url = settings.BASE_DIR / 'acueducto' / 'static'
+
+        # --- Perform assertions on kwargs passed to mock_generar_pdf ---
+        self.assertEqual(kwargs.get('usuario'), expected_usuario)
+        
+        # Compare date part of fecha_emision as timezone.now() includes time
+        # The view code for fecha_emision:
+        # `datetime.strptime(request.POST.get('fecha_emision'), '%Y-%m-%d') if request.POST.get('fecha_emision') else None`
+        # This is then passed to `generar_factura_individual` which calls `generar_pdf_factura` with `fecha_emision or timezone.now()`
+        # So the argument to `generar_pdf_factura` is a datetime object.
+        called_fecha_emision = kwargs.get('fecha_emision')
+        self.assertIsInstance(called_fecha_emision, datetime)
+        self.assertEqual(called_fecha_emision.strftime('%Y-%m-%d'), expected_fecha_emision_dt.strftime('%Y-%m-%d'))
+
+        self.assertEqual(kwargs.get('periodo_facturacion'), expected_periodo_facturacion_str)
+        self.assertEqual(kwargs.get('base_url'), expected_base_url)
+        self.assertEqual(kwargs.get('consecutivo_desde'), consecutivo_desde_val)
+        self.assertEqual(kwargs.get('consecutivo_hasta'), consecutivo_hasta_val)
