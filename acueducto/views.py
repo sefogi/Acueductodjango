@@ -93,7 +93,8 @@ def lista_usuarios(request):
     if busqueda:
         usuarios = usuarios.filter(
             Q(contrato__icontains=busqueda) |
-            Q(address__icontains=busqueda)
+            Q(address__icontains=busqueda) |
+            Q(zona__icontains=busqueda)
         )
     
     return render(request, 'lista_usuarios.html', {
@@ -102,7 +103,7 @@ def lista_usuarios(request):
         'rutas_activas': rutas_activas
     })
 
-def generar_pdf_factura(usuario, fecha_emision, periodo_facturacion, base_url):
+def generar_pdf_factura(usuario, fecha_emision, periodo_facturacion, base_url, consecutivo_desde=None, consecutivo_hasta=None):
     """Genera el PDF de una factura individual"""
     historico_lecturas = usuario.lecturas.all().order_by('-fecha_lectura')[:6]
     lectura_anterior = None
@@ -144,6 +145,8 @@ def generar_pdf_factura(usuario, fecha_emision, periodo_facturacion, base_url):
         'costo_consumo_agua_redondeado': costo_consumo_agua_redondeado,
         'total_factura_redondeado': total_factura_redondeado,
         'valor_por_m3': valor_por_m3,
+        'consecutivo_desde': consecutivo_desde,
+        'consecutivo_hasta': consecutivo_hasta,
     }
     html = template.render(context)
     
@@ -210,7 +213,7 @@ def generar_todas_facturas(periodo_inicio, periodo_fin):
         
     return zip_buffer, None # No errors
 
-def generar_factura_individual(contrato, fecha_emision, periodo_inicio, periodo_fin):
+def generar_factura_individual(contrato, fecha_emision, periodo_inicio, periodo_fin, consecutivo_desde=None, consecutivo_hasta=None):
     """Genera una factura individual"""
     if not all([periodo_inicio, periodo_fin]):
         raise ValueError('Por favor, especifique el período de facturación')
@@ -226,7 +229,9 @@ def generar_factura_individual(contrato, fecha_emision, periodo_inicio, periodo_
         usuario=usuario,
         fecha_emision=fecha_emision or timezone.now(),
         periodo_facturacion=periodo_facturacion,
-        base_url=base_url
+        base_url=base_url,
+        consecutivo_desde=consecutivo_desde,
+        consecutivo_hasta=consecutivo_hasta
     )
 
 def generar_factura(request):
@@ -253,7 +258,9 @@ def generar_factura(request):
                     contrato=request.POST.get('contrato'),
                     fecha_emision=datetime.strptime(request.POST.get('fecha_emision'), '%Y-%m-%d') if request.POST.get('fecha_emision') else None,
                     periodo_inicio=request.POST.get('periodo_inicio'),
-                    periodo_fin=request.POST.get('periodo_fin')
+                    periodo_fin=request.POST.get('periodo_fin'),
+                    consecutivo_desde=request.POST.get('consecutivo_desde'),
+                    consecutivo_hasta=request.POST.get('consecutivo_hasta')
                 )
                 
                 if 'enviar_email' in request.POST:
