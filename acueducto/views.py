@@ -18,11 +18,68 @@ import logging # Import logging
 from io import BytesIO
 import zipfile
 import json
-from .models import UserAcueducto, HistoricoLectura, Ruta, OrdenRuta
-from .utils import formatear_fecha_espanol
+from .models import UserAcueducto, HistoricoLectura, Ruta, OrdenRuta, Factura
+from .utils import formatear_fecha_espanol, obtener_siguiente_numero_factura
 from .forms import UserAcueductoForm # Import the new form
 
 logger = logging.getLogger(__name__) # Initialize logger
+
+
+# Helper function for invoice data preparation
+def _preparar_datos_facturacion(usuario, periodo_inicio_str, periodo_fin_str, fecha_emision_str=None):
+    if not periodo_inicio_str or not periodo_fin_str:
+        raise ValueError("El período de inicio y fin son obligatorios.")
+
+    fecha_emision_obj = timezone.now().date()
+    if fecha_emision_str:
+        try:
+            fecha_emision_obj = datetime.strptime(fecha_emision_str, '%Y-%m-%d').date()
+        except ValueError:
+            # Handle invalid date string if necessary, or let it raise
+            raise ValueError("Formato de fecha de emisión inválido. Use YYYY-MM-DD.")
+
+    try:
+        periodo_inicio_obj = datetime.strptime(periodo_inicio_str, '%Y-%m-%d').date()
+        periodo_fin_obj = datetime.strptime(periodo_fin_str, '%Y-%m-%d').date()
+    except ValueError:
+        raise ValueError("Formato de fecha de período inválido. Use YYYY-MM-DD.")
+
+    historico_lecturas_qs = usuario.lecturas.all().order_by('-fecha_lectura')[:6]
+    lectura_anterior_obj = historico_lecturas_qs[1] if len(historico_lecturas_qs) > 1 else None
+    
+    lectura_actual_valor = usuario.lectura if usuario.lectura is not None else 0
+    lectura_anterior_valor = lectura_anterior_obj.lectura if lectura_anterior_obj and lectura_anterior_obj.lectura is not None else 0
+    
+    consumo_m3 = 0
+    if usuario.lectura is not None: # Consumo only if current reading exists
+        consumo_m3 = lectura_actual_valor - lectura_anterior_valor
+    consumo_m3 = max(0, consumo_m3) # Ensure non-negative consumption
+
+    valor_por_m3 = 1000  # Hardcoded for now
+    costo_consumo_agua_raw = consumo_m3 * valor_por_m3
+    costo_consumo_agua_redondeado = round(costo_consumo_agua_raw)
+
+    credito_valor = usuario.credito if usuario.credito is not None else 0
+    otros_gastos_valor = usuario.otros_gastos_valor if usuario.otros_gastos_valor is not None else 0
+
+    total_factura_raw = costo_consumo_agua_redondeado - float(credito_valor) + float(otros_gastos_valor) # Corrected: credit is a deduction
+    total_factura_redondeado = round(total_factura_raw)
+
+    return {
+        'fecha_emision_obj': fecha_emision_obj,
+        'periodo_inicio_obj': periodo_inicio_obj,
+        'periodo_fin_obj': periodo_fin_obj,
+        'lectura_actual_valor': lectura_actual_valor,
+        'lectura_anterior_obj': lectura_anterior_obj,
+        'lectura_anterior_valor': lectura_anterior_valor,
+        'consumo_m3': consumo_m3,
+        'costo_consumo_agua_redondeado': costo_consumo_agua_redondeado,
+        'total_factura_redondeado': total_factura_redondeado,
+        'historico_lecturas_qs': historico_lecturas_qs,
+        'valor_por_m3': valor_por_m3,
+        'credito_aplicado_valor': credito_valor,
+        'otros_gastos_aplicados_valor': otros_gastos_valor
+    }
 
 # Create your views here.
 def index(request):
@@ -103,50 +160,20 @@ def lista_usuarios(request):
         'rutas_activas': rutas_activas
     })
 
-def generar_pdf_factura(usuario, fecha_emision, periodo_facturacion, base_url, consecutivo_desde=None, consecutivo_hasta=None):
+def generar_pdf_factura(factura_obj, historico_lecturas, lectura_anterior_obj, valor_por_m3, base_url):
     """Genera el PDF de una factura individual"""
-    historico_lecturas = usuario.lecturas.all().order_by('-fecha_lectura')[:6]
-    lectura_anterior = None
-    if len(historico_lecturas) > 1:
-        lectura_anterior = historico_lecturas[1]
-    
-    # Determine consumo_m3
-    consumo_m3 = 0
-    if lectura_anterior and usuario.lectura is not None and lectura_anterior.lectura is not None:
-        consumo_m3 = usuario.lectura - lectura_anterior.lectura
-    elif usuario.lectura is not None:
-        consumo_m3 = usuario.lectura
-    else:
-        consumo_m3 = 0
-
-    valor_por_m3 = 1000
-    
-    # Calculate costo_consumo_raw based on usuario.lectura
-    if usuario.lectura is not None:
-        costo_consumo_raw = usuario.lectura * valor_por_m3
-    else:
-        costo_consumo_raw = 0
-        
-    costo_consumo_agua_redondeado = round(costo_consumo_raw)
-
-    credito = usuario.credito if usuario.credito is not None else 0
-    otros_gastos = usuario.otros_gastos_valor if usuario.otros_gastos_valor is not None else 0
-
-    total_factura_raw = costo_consumo_agua_redondeado + float(credito) + float(otros_gastos)
-    total_factura_redondeado = round(total_factura_raw)
-
     template = get_template('factura_template.html')
     context = {
-        'usuario': usuario,
+        'factura': factura_obj,
+        'usuario': factura_obj.usuario,
+        'fecha_emision': factura_obj.fecha_emision,
+        'periodo_facturacion': f"Del {formatear_fecha_espanol(factura_obj.periodo_inicio)} al {formatear_fecha_espanol(factura_obj.periodo_fin)}",
+        'costo_consumo_agua_redondeado': factura_obj.costo_consumo_agua,
+        'total_factura_redondeado': factura_obj.total_factura,
         'historico_lecturas': historico_lecturas,
-        'lectura_anterior': lectura_anterior,
-        'fecha_emision': fecha_emision,
-        'periodo_facturacion': periodo_facturacion,
-        'costo_consumo_agua_redondeado': costo_consumo_agua_redondeado,
-        'total_factura_redondeado': total_factura_redondeado,
+        'lectura_anterior': lectura_anterior_obj, # template uses this name
         'valor_por_m3': valor_por_m3,
-        'consecutivo_desde': consecutivo_desde,
-        'consecutivo_hasta': consecutivo_hasta,
+        # 'consecutivo_desde' and 'consecutivo_hasta' are removed as per instructions
     }
     html = template.render(context)
     
@@ -172,7 +199,7 @@ def generar_todas_facturas(periodo_inicio, periodo_fin):
     
     periodo_inicio_fecha = datetime.strptime(periodo_inicio, '%Y-%m-%d')
     periodo_fin_fecha = datetime.strptime(periodo_fin, '%Y-%m-%d')
-    periodo_facturacion = f"Del {formatear_fecha_espanol(periodo_inicio_fecha)} al {formatear_fecha_espanol(periodo_fin_fecha)}"
+    periodo_facturacion = f"Del {formatear_fecha_espanol(periodo_inicio_obj)} al {formatear_fecha_espanol(periodo_fin_obj)}" # This line is not used anymore
     
     zip_buffer = BytesIO()
     base_url = settings.BASE_DIR / 'acueducto' / 'static'
@@ -181,15 +208,34 @@ def generar_todas_facturas(periodo_inicio, periodo_fin):
     with zipfile.ZipFile(zip_buffer, 'w') as zip_file:
         for usuario in UserAcueducto.objects.all():
             try:
-                pdf_file = generar_pdf_factura(
+                datos = _preparar_datos_facturacion(usuario, periodo_inicio, periodo_fin) # fecha_emision will default to now
+                numero_nuevo_factura = obtener_siguiente_numero_factura()
+                
+                factura_guardada = Factura.objects.create(
                     usuario=usuario,
-                    fecha_emision=timezone.now(),
-                    periodo_facturacion=periodo_facturacion,
+                    numero_factura=str(numero_nuevo_factura),
+                    fecha_emision=datos['fecha_emision_obj'],
+                    periodo_inicio=datos['periodo_inicio_obj'],
+                    periodo_fin=datos['periodo_fin_obj'],
+                    lectura_actual=datos['lectura_actual_valor'],
+                    lectura_anterior=datos['lectura_anterior_valor'],
+                    consumo_m3=datos['consumo_m3'],
+                    costo_consumo_agua=datos['costo_consumo_agua_redondeado'],
+                    credito_aplicado=datos['credito_aplicado_valor'],
+                    otros_gastos_aplicados=datos['otros_gastos_aplicados_valor'],
+                    total_factura=datos['total_factura_redondeado']
+                )
+                
+                pdf_file = generar_pdf_factura(
+                    factura_obj=factura_guardada,
+                    historico_lecturas=datos['historico_lecturas_qs'],
+                    lectura_anterior_obj=datos['lectura_anterior_obj'],
+                    valor_por_m3=datos['valor_por_m3'],
                     base_url=base_url
                 )
                 
                 with open(pdf_file.name, 'rb') as pdf:
-                    zip_file.writestr(f'factura_{usuario.contrato}.pdf', pdf.read())
+                    zip_file.writestr(f'factura_{factura_guardada.numero_factura}_{usuario.contrato}.pdf', pdf.read())
                 
                 os.unlink(pdf_file.name)
             except Exception as e:
@@ -213,26 +259,42 @@ def generar_todas_facturas(periodo_inicio, periodo_fin):
         
     return zip_buffer, None # No errors
 
-def generar_factura_individual(contrato, fecha_emision, periodo_inicio, periodo_fin, consecutivo_desde=None, consecutivo_hasta=None):
-    """Genera una factura individual"""
-    if not all([periodo_inicio, periodo_fin]):
-        raise ValueError('Por favor, especifique el período de facturación')
+def generar_factura_individual(contrato_str, fecha_emision_str, periodo_inicio_str, periodo_fin_str):
+    """Genera una factura individual, la guarda en la BD y devuelve el archivo PDF."""
+    if not all([contrato_str, periodo_inicio_str, periodo_fin_str]):
+        # fecha_emision_str can be None to default to today
+        raise ValueError('Contrato, período de inicio y período de fin son requeridos.')
+
+    usuario = get_object_or_404(UserAcueducto, contrato=contrato_str)
     
-    periodo_inicio_fecha = datetime.strptime(periodo_inicio, '%Y-%m-%d')
-    periodo_fin_fecha = datetime.strptime(periodo_fin, '%Y-%m-%d')
-    periodo_facturacion = f"Del {formatear_fecha_espanol(periodo_inicio_fecha)} al {formatear_fecha_espanol(periodo_fin_fecha)}"
-    
-    usuario = get_object_or_404(UserAcueducto, contrato=contrato)
+    datos = _preparar_datos_facturacion(usuario, periodo_inicio_str, periodo_fin_str, fecha_emision_str)
+    numero_nuevo_factura = obtener_siguiente_numero_factura()
+
+    factura_guardada = Factura.objects.create(
+        usuario=usuario,
+        numero_factura=str(numero_nuevo_factura),
+        fecha_emision=datos['fecha_emision_obj'],
+        periodo_inicio=datos['periodo_inicio_obj'],
+        periodo_fin=datos['periodo_fin_obj'],
+        lectura_actual=datos['lectura_actual_valor'],
+        lectura_anterior=datos['lectura_anterior_valor'],
+        consumo_m3=datos['consumo_m3'],
+        costo_consumo_agua=datos['costo_consumo_agua_redondeado'],
+        credito_aplicado=datos['credito_aplicado_valor'],
+        otros_gastos_aplicados=datos['otros_gastos_aplicados_valor'],
+        total_factura=datos['total_factura_redondeado']
+    )
+
     base_url = settings.BASE_DIR / 'acueducto' / 'static'
     
-    return generar_pdf_factura(
-        usuario=usuario,
-        fecha_emision=fecha_emision or timezone.now(),
-        periodo_facturacion=periodo_facturacion,
-        base_url=base_url,
-        consecutivo_desde=consecutivo_desde,
-        consecutivo_hasta=consecutivo_hasta
+    pdf_file = generar_pdf_factura(
+        factura_obj=factura_guardada,
+        historico_lecturas=datos['historico_lecturas_qs'],
+        lectura_anterior_obj=datos['lectura_anterior_obj'],
+        valor_por_m3=datos['valor_por_m3'],
+        base_url=base_url
     )
+    return pdf_file, factura_guardada # Return both pdf_file and the saved factura object
 
 def generar_factura(request):
     """Vista principal para la generación de facturas"""
@@ -253,30 +315,38 @@ def generar_factura(request):
                 response = HttpResponse(zip_buffer.getvalue(), content_type='application/zip')
                 response['Content-Disposition'] = 'attachment; filename="todas_las_facturas.zip"'
                 return response
-            else:
-                pdf_file = generar_factura_individual(
-                    contrato=request.POST.get('contrato'),
-                    fecha_emision=datetime.strptime(request.POST.get('fecha_emision'), '%Y-%m-%d') if request.POST.get('fecha_emision') else None,
-                    periodo_inicio=request.POST.get('periodo_inicio'),
-                    periodo_fin=request.POST.get('periodo_fin'),
-                    consecutivo_desde=request.POST.get('consecutivo_desde'),
-                    consecutivo_hasta=request.POST.get('consecutivo_hasta')
+            else: # Generar factura individual
+                contrato = request.POST.get('contrato')
+                fecha_emision_str = request.POST.get('fecha_emision') # Will be YYYY-MM-DD string or empty
+                periodo_inicio_str = request.POST.get('periodo_inicio')
+                periodo_fin_str = request.POST.get('periodo_fin')
+
+                pdf_file, factura_obj = generar_factura_individual( # Now returns pdf_file and factura_obj
+                    contrato_str=contrato,
+                    fecha_emision_str=fecha_emision_str,
+                    periodo_inicio_str=periodo_inicio_str,
+                    periodo_fin_str=periodo_fin_str
                 )
                 
                 if 'enviar_email' in request.POST:
-                    usuario = UserAcueducto.objects.get(contrato=request.POST.get('contrato'))
-                    enviar_factura_email(usuario, pdf_file)
-                    messages.success(request, 'Factura enviada por correo exitosamente')
+                    # factura_obj.usuario is already the user object
+                    enviar_factura_email(factura_obj.usuario, pdf_file)
+                    messages.success(request, f'Factura {factura_obj.numero_factura} enviada por correo exitosamente')
                     os.unlink(pdf_file.name)
                     return redirect('generar_factura')
                 
                 with open(pdf_file.name, 'rb') as pdf:
                     response = HttpResponse(pdf.read(), content_type='application/pdf')
-                    response['Content-Disposition'] = f'inline; filename="factura_{request.POST.get("contrato")}.pdf"'
+                    response['Content-Disposition'] = f'inline; filename="factura_{factura_obj.numero_factura}_{contrato}.pdf"'
                     os.unlink(pdf_file.name)
                     return response
                     
+        except ValueError as ve: # Catch specific errors from _preparar_datos_facturacion or date parsing
+            logger.error(f"Error de valor al generar factura: {ve}")
+            messages.error(request, f'Error en los datos para generar la factura: {str(ve)}')
+            return redirect('generar_factura')
         except Exception as e:
+            logger.error(f"Error general al generar factura: {e}", exc_info=True)
             messages.error(request, f'Error al generar la factura: {str(e)}')
             return redirect('generar_factura')
     

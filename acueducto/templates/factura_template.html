@@ -6,7 +6,7 @@
 <head>
     {% comment %}Asegurando que los archivos estáticos se cargan correctamente{% endcomment %}
     <meta charset="UTF-8">
-    <title>Factura - {{ usuario.contrato }}</title>
+    <title>Factura - {{ factura.usuario.contrato }}</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -160,20 +160,16 @@
                     <td class="info-cell">
                         <div class="empresa-info">
                             <h1 class="factura-titulo">Factura del Acueducto La Marina Valle</h1>
-                            <p class="factura-numero">Factura N°: {{ usuario.contrato }}-{{ fecha_emision|date:"Ymd" }}</p>
-                            <p class="factura-numero">Numero de medidor: {{ usuario.numero_de_medidor }}</p>
-                            <p>Fecha de Emisión: {{ fecha_emision|fecha_espanol }}</p>
+                            <p class="factura-numero">Factura N°: {{ factura.numero_factura }}</p>
+                            <p class="factura-numero">Numero de medidor: {{ factura.usuario.numero_de_medidor }}</p>
+                            <p>Fecha de Emisión: {{ factura.fecha_emision|fecha_espanol }}</p>
                             <p class="periodo-facturacion"><strong>Período de Facturación:</strong><br>{{ periodo_facturacion }}</p>
-                            {% if consecutivo_desde and consecutivo_hasta %}
-                                <p>Consecutivo Desde: {{ consecutivo_desde }}</p>
-                                <p>Consecutivo Hasta: {{ consecutivo_hasta }}</p>
-                            {% endif %}
                         </div>
                     </td>
                     <td class="contrato-cell">
                         <div class="contrato-info">
                             <strong>N° de Contrato</strong><br>
-                            {{ usuario.contrato }}
+                            {{ factura.usuario.contrato }}
                         </div>
                     </td>
                 </tr>
@@ -182,16 +178,16 @@
 
         <div class="info-cliente">
             <h2>Información del Cliente</h2>
-            <p><strong>Contrato:</strong> {{ usuario.contrato }}</p>
-            <p><strong>Nombre:</strong> {{ usuario.name }} {{ usuario.lastname }}</p>
-            <p><strong>Categoría:</strong> {{ usuario.get_categoria_display }}</p>
-            <p><strong>Zona:</strong> {{ usuario.zona }}</p>
+            <p><strong>Contrato:</strong> {{ factura.usuario.contrato }}</p>
+            <p><strong>Nombre:</strong> {{ factura.usuario.name }} {{ factura.usuario.lastname }}</p>
+            <p><strong>Categoría:</strong> {{ factura.usuario.get_categoria_display }}</p>
+            <p><strong>Zona:</strong> {{ factura.usuario.zona }}</p>
             {% if historico_lecturas.0 %}
             <p><strong>Fecha última lectura:</strong> {{ historico_lecturas.0.fecha_lectura|date:"d/m/Y" }}</p>
             {% endif %}
-            <p><strong>Dirección:</strong> {{ usuario.address }}</p>
-            <p><strong>Email:</strong> {{ usuario.email }}</p>
-            <p><strong>Teléfono:</strong> {{ usuario.phone }}</p>
+            <p><strong>Dirección:</strong> {{ factura.usuario.address }}</p>
+            <p><strong>Email:</strong> {{ factura.usuario.email }}</p>
+            <p><strong>Teléfono:</strong> {{ factura.usuario.phone }}</p>
         </div>
 
         <table class="detalles">
@@ -208,7 +204,7 @@
                     <td>Consumo de Agua</td>
                     <td class="lecturas">
                         <div class="lectura-info">
-                            <strong>Lectura Actual:</strong> {{ usuario.lectura }} m³
+                            <strong>Lectura Actual:</strong> {{ factura.lectura_actual }} m³
                             <small>({{ historico_lecturas.0.fecha_lectura|date:"d/m/Y" }})</small>
                         </div>
                         {% if lectura_anterior %}
@@ -217,35 +213,35 @@
                             <small>({{ lectura_anterior.fecha_lectura|date:"d/m/Y" }})</small>
                         </div>
                         <div class="lectura-info consumo-destacado">
-                            <strong>Diferencia de Consumo:</strong> {{ usuario.lectura|sub:lectura_anterior.lectura|floatformat:1 }} m³
+                            <strong>Diferencia de Consumo:</strong> {{ factura.consumo_m3|floatformat:1 }} m³
                         </div>
                         {% endif %}
                     </td>
 
                     <td>{{ valor_por_m3|format_cop:0 }} por unidad</td>
-                    <td>{{ costo_consumo_agua_redondeado|format_cop:0 }}</td>
+                    <td>{{ factura.costo_consumo_agua|format_cop:0 }}</td>
 
 
                 </tr>
-                {% if usuario.credito %}
+                {% if factura.credito_aplicado > 0 %}
                 <tr class="extras-row">
                     <td>Crédito</td>
-                    <td colspan="2">{{ usuario.credito_descripcion|default:"Saldo pendiente" }}</td>
-                    <td>{{ usuario.credito|format_cop:2 }}</td>
+                    <td colspan="2">{{ factura.usuario.credito_descripcion|default:"Saldo pendiente" }}</td>
+                    <td>-{{ factura.credito_aplicado|format_cop:2 }}</td>
                 </tr>
                 {% endif %}
-                {% if usuario.otros_gastos_valor %}
+                {% if factura.otros_gastos_aplicados > 0 %}
                 <tr class="extras-row">
                     <td>Otros Gastos</td>
-                    <td colspan="2">{{ usuario.otros_gastos_descripcion }}</td>
-                    <td>{{ usuario.otros_gastos_valor|format_cop:2 }}</td>
+                    <td colspan="2">{{ factura.usuario.otros_gastos_descripcion }}</td>
+                    <td>{{ factura.otros_gastos_aplicados|format_cop:2 }}</td>
                 </tr>
                 {% endif %}
             </tbody>
         </table>
 
         <div class="total">
-            Total a Pagar: {{ total_factura_redondeado|format_cop:0 }}
+            Total a Pagar: {{ factura.total_factura|format_cop:0 }}
         </div>
 
         <div class="grafico-container">

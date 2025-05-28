@@ -71,7 +71,31 @@ class OrdenRuta(models.Model):
         return f"{self.ruta} - {self.usuario.contrato} (Orden: {self.orden})"
 
 
+class Factura(models.Model):
+    usuario = models.ForeignKey(UserAcueducto, on_delete=models.CASCADE, related_name='facturas')
+    numero_factura = models.CharField(max_length=20, unique=True, help_text="Número único consecutivo de la factura")
+    fecha_emision = models.DateField()
+    periodo_inicio = models.DateField()
+    periodo_fin = models.DateField()
+    lectura_actual = models.FloatField(null=True, blank=True)
+    lectura_anterior = models.FloatField(null=True, blank=True)
+    consumo_m3 = models.FloatField(null=True, blank=True)
+    costo_consumo_agua = models.DecimalField(max_digits=10, decimal_places=2)
+    credito_aplicado = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    otros_gastos_aplicados = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    total_factura = models.DecimalField(max_digits=10, decimal_places=2)
+    creada_en = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Factura {self.numero_factura} - {self.usuario.contrato}"
+
+    class Meta:
+        ordering = ['-fecha_emision', '-numero_factura']
 
 
+class ConfiguracionGlobal(models.Model):
+    clave = models.CharField(max_length=50, primary_key=True, default='main')
+    ultimo_numero_factura = models.IntegerField(default=0)
 
-
+    def __str__(self):
+        return f"Configuración Global - Última Factura: {self.ultimo_numero_factura}"
