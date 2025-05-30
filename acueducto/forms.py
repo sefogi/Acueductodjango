@@ -42,7 +42,7 @@ class UserAcueductoForm(forms.ModelForm):
             'fecha_ultima_lectura': forms.DateInput(attrs={'type': 'date'}), # Renamed from 'date'
             'credito_descripcion': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Descripción del crédito'}),
             'otros_gastos_descripcion': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Descripción de otros gastos'}),
-            'lectura': forms.NumberInput(attrs={'placeholder': 'Valor numérico del medidor'}), # Added lectura widget
+            'lectura': forms.NumberInput(attrs={'placeholder': 'Valor numérico del medidor en m3'}), # Added lectura widget
             'numero_de_medidor': forms.TextInput(attrs={'placeholder': 'Número del medidor'}),
         }
 
