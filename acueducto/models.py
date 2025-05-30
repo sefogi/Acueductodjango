@@ -9,7 +9,7 @@ class UserAcueducto(models.Model):
     ]
     
     contrato = models.CharField(max_length=100, unique=True)
-    date = models.DateField(max_length=10, blank=True, null=True)
+    fecha_ultima_lectura = models.DateField(verbose_name="Fecha Última Lectura", blank=True, null=True)
     name = models.CharField(max_length=100)
     lastname = models.CharField(max_length=100)
     email = models.EmailField(max_length=100, unique=True)
@@ -50,11 +50,22 @@ class Ruta(models.Model):
         return f"Ruta {self.nombre} - {estado} ({self.fecha_creacion.strftime('%d/%m/%Y')})"
 
     def porcentaje_completado(self):
-        total_lecturas = self.ordenruta_set.count()
-        if total_lecturas == 0:
-            return 0
-        lecturas_completadas = self.ordenruta_set.filter(lectura_tomada=True).count()
-        return int((lecturas_completadas / total_lecturas) * 100)
+        if hasattr(self, 'total_ordenes') and hasattr(self, 'lecturas_completadas_count'):
+            # Using annotated fields
+            if self.total_ordenes == 0:
+                return 0
+            # Ensure counts are not None, though Count should return 0
+            total_ordenes = self.total_ordenes if self.total_ordenes is not None else 0
+            lecturas_completadas_count = self.lecturas_completadas_count if self.lecturas_completadas_count is not None else 0
+            if total_ordenes == 0: # Double check after potential None conversion
+                return 0
+            return int((lecturas_completadas_count / total_ordenes) * 100)
+        else: # Fallback for cases where annotation is not used
+            total_lecturas = self.ordenruta_set.count()
+            if total_lecturas == 0:
+                return 0
+            lecturas_completadas = self.ordenruta_set.filter(lectura_tomada=True).count()
+            return int((lecturas_completadas / total_lecturas) * 100)
 
 class OrdenRuta(models.Model):
     ruta = models.ForeignKey(Ruta, on_delete=models.CASCADE)
