@@ -324,111 +324,151 @@ def logout_view(request):
     logout(request)
     return redirect('login')
 
-@login_required(login_url='login')
-def toma_lectura(request):
-    
-    usuario = None
-    historico = None
-    ruta = None # Initialize ruta
-    total_lecturas = 0
-    lecturas_completadas = 0
-    porcentaje_completado = 0
-    
+def _get_active_route_details():
+    """
+    Queries for an active route and calculates its details.
+    Returns:
+        tuple: (Ruta|None, total_lecturas, lecturas_completadas, porcentaje_completado)
+    """
     try:
-        # Obtener la ruta activa
         ruta = Ruta.objects.filter(activa=True).prefetch_related(
             'ordenruta_set__usuario',
-            'ordenruta_set__usuario__lecturas'
+            'ordenruta_set__usuario__lecturas'  # Assuming 'lecturas' is the related_name for HistoricoLectura on UserAcueducto
         ).first()
-        
+
         if ruta:
             total_lecturas = ruta.ordenruta_set.count()
             lecturas_completadas = ruta.ordenruta_set.filter(lectura_tomada=True).count()
-            porcentaje_completado = (lecturas_completadas / total_lecturas * 100) if total_lecturas > 0 else 0
+            if total_lecturas > 0:
+                porcentaje_completado = (lecturas_completadas / total_lecturas) * 100
+            else:
+                porcentaje_completado = 0
+            return ruta, total_lecturas, lecturas_completadas, porcentaje_completado
         else:
-            total_lecturas = 0
-            lecturas_completadas = 0
-            porcentaje_completado = 0
+            return None, 0, 0, 0
+    except Exception as e: # Broad exception to catch any issue during query/calculation
+        logger.error(f"Error in _get_active_route_details: {e}")
+        return None, 0, 0, 0
+
+def _handle_lectura_submission(request, ruta, usuario_contrato, nueva_lectura_str):
+    """
+    Handles the submission of a new lectura.
+    Returns:
+        tuple: (UserAcueducto|None, historico_list|None)
+    """
+    usuario = None
+    try:
+        usuario = UserAcueducto.objects.get(contrato=usuario_contrato)
+    except UserAcueducto.DoesNotExist:
+        messages.error(request, "Usuario no encontrado")
+        return None, None
+
+    try:
+        fecha_actual = timezone.now().date()
         
+        # Crear el histórico de lectura
+        HistoricoLectura.objects.create(
+            usuario=usuario,
+            lectura=nueva_lectura_str,
+            fecha_lectura=fecha_actual
+        )
+        
+        # Actualizar la lectura actual del usuario
+        usuario.lectura = nueva_lectura_str
+        usuario.fecha_ultima_lectura = fecha_actual
+        usuario.save()
+        
+        # Actualizar el estado de la lectura en la ruta si existe
+        if ruta:
+            orden_ruta = ruta.ordenruta_set.filter(usuario=usuario).first()
+            if orden_ruta:
+                orden_ruta.lectura_tomada = True
+                orden_ruta.save()
+        
+        messages.success(request, "Lectura registrada exitosamente")
+        historico = usuario.lecturas.all().order_by('-fecha_lectura')[:6]
+        return usuario, list(historico)
+    
+    except IntegrityError as ie:
+        logger.error(f"Error de integridad al guardar lectura para {usuario_contrato}: {ie}")
+        messages.error(request, f"Error de integridad de datos al guardar la lectura: {ie}")
+        return usuario, None
+    except DatabaseError as de:
+        logger.error(f"Error de base de datos al guardar lectura para {usuario_contrato}: {de}")
+        messages.error(request, f"Error de base de datos al guardar la lectura: {de}")
+        return usuario, None
+    except Exception as e:
+        logger.error(f"Error inesperado al guardar lectura para {usuario_contrato}: {e}")
+        messages.error(request, f"Error inesperado al guardar la lectura: {e}")
+        return usuario, None
+
+def _get_user_data_for_display(request, contrato_str):
+    """
+    Fetches user and their historico for display.
+    Returns:
+        tuple: (UserAcueducto|None, historico_list|None)
+    """
+    if not contrato_str: # Handle empty contrato_str if it can occur
+        # messages.error(request, "Número de contrato no proporcionado.") # Optional: if empty string is invalid
+        return None, None
+    try:
+        usuario = UserAcueducto.objects.get(contrato=contrato_str)
+        historico = usuario.lecturas.all().order_by('-fecha_lectura')[:6]
+        return usuario, list(historico)
+    except UserAcueducto.DoesNotExist:
+        messages.error(request, "Usuario no encontrado")
+        return None, None
+    except Exception as e:
+        logger.error(f"Error inesperado al obtener datos de usuario para {contrato_str}: {e}")
+        messages.error(request, f"Error inesperado al obtener datos del usuario: {e}")
+        return None, None
+
+@login_required(login_url='login')
+def toma_lectura(request):
+    usuario = None
+    historico = None
+    
+    # Attempt to get active route details first
+    ruta, total_lecturas, lecturas_completadas, porcentaje_completado = _get_active_route_details()
+
+    try:
         if request.method == 'POST':
-            contrato = request.POST.get('contrato')
-            nueva_lectura = request.POST.get('lectura')
-            try:
-                usuario = UserAcueducto.objects.get(contrato=contrato)
-                fecha_actual = timezone.now().date()
-                
-                try:
-                    # Crear el histórico de lectura
-                    HistoricoLectura.objects.create(
-                        usuario=usuario,
-                        lectura=nueva_lectura,
-                        fecha_lectura=fecha_actual
-                    )
-                    
-                    # Actualizar la lectura actual del usuario
-                    usuario.lectura = nueva_lectura
-                    usuario.fecha_ultima_lectura = fecha_actual # Renamed from date
-                    usuario.save()
-                    
-                    # Actualizar el estado de la lectura en la ruta si existe
-                    if ruta:
-                        orden_ruta = ruta.ordenruta_set.filter(usuario=usuario).first()
-                        if orden_ruta:
-                            orden_ruta.lectura_tomada = True
-                            orden_ruta.save()
-                    
-                    messages.success(request, "Lectura registrada exitosamente") # Use messages framework
-                    historico = usuario.lecturas.all()[:6] # Refresh historico
-                
-                except IntegrityError as ie:
-                    logger.error(f"Error de integridad al guardar lectura para {contrato}: {ie}")
-                    messages.error(request, f"Error de integridad de datos al guardar la lectura: {ie}")
-                except DatabaseError as de:
-                    logger.error(f"Error de base de datos al guardar lectura para {contrato}: {de}")
-                    messages.error(request, f"Error de base de datos al guardar la lectura: {de}")
-                except Exception as e: # Catch any other unexpected error during save
-                    logger.error(f"Error inesperado al guardar lectura para {contrato}: {e}")
-                    messages.error(request, f"Error inesperado al guardar la lectura: {e}")
+            contrato_str = request.POST.get('contrato')
+            nueva_lectura_str = request.POST.get('lectura')
+            # _handle_lectura_submission will set messages for success/failure
+            usuario, historico = _handle_lectura_submission(request, ruta, contrato_str, nueva_lectura_str)
+            # If submission was successful and route details were updated, refresh them
+            if usuario and historico and ruta: # Check if submission was successful
+                 # Re-fetch route details if a reading was successfully taken, to update completion stats
+                 ruta, total_lecturas, lecturas_completadas, porcentaje_completado = _get_active_route_details()
 
-            except UserAcueducto.DoesNotExist:
-                messages.error(request, "Usuario no encontrado") # Use messages framework
-        
         elif request.method == 'GET':
-            contrato = request.GET.get('contrato')
-            if contrato:
-                try:
-                    usuario = UserAcueducto.objects.get(contrato=contrato)
-                    historico = usuario.lecturas.all()[:6]
-                except UserAcueducto.DoesNotExist:
-                    messages.error(request, "Usuario no encontrado") # Use messages framework
-            # If user is not found by GET, 'usuario' remains None, 'historico' remains None.
-            # The template should handle this.
+            contrato_str = request.GET.get('contrato')
+            if contrato_str:
+                # _get_user_data_for_display will set messages if user not found
+                usuario, historico = _get_user_data_for_display(request, contrato_str)
+        
+        # After POST or GET, if ruta is None (no active route or error fetching it), add info message.
+        # This replaces the old Ruta.DoesNotExist block logic.
+        if ruta is None:
+            messages.info(request, "No hay ruta activa disponible en este momento.")
+            # Ensure default values for context if ruta is None
+            total_lecturas, lecturas_completadas, porcentaje_completado = 0, 0, 0
 
-        # Prepare context once, after all operations
         context = {
-            # 'mensaje': mensaje, # Replaced by Django messages
             'usuario': usuario,
             'historico': historico,
-            'ruta_activa': ruta, # This is the ruta object from the outer try
+            'ruta_activa': ruta,
             'total_lecturas': total_lecturas,
             'lecturas_completadas': lecturas_completadas,
             'porcentaje_completado': porcentaje_completado
         }
         return render(request, 'toma_lectura.html', context)
-        
-    except Ruta.DoesNotExist: # More specific error for initial route loading
-        logger.warning("Intento de cargar toma_lectura sin ruta activa o ruta no encontrada.")
-        messages.info(request, "No hay ruta activa disponible en este momento.") # User-friendly message
-        # Render the page without route-specific context, or redirect
-        context = {
-            'usuario': None, 'historico': None, 'ruta_activa': None,
-            'total_lecturas': 0, 'lecturas_completadas': 0, 'porcentaje_completado': 0
-        }
-        return render(request, 'toma_lectura.html', context)
-    except Exception as e: # Catch-all for other unexpected errors during setup
+
+    except Exception as e: # Catch-all for any other unexpected errors
         logger.error(f'Error inesperado al cargar la página de toma de lectura: {str(e)}')
         messages.error(request, f'Error inesperado al cargar la página: {str(e)}')
-        # Consider redirecting to a safe page or rendering with minimal context
+        # Render with minimal context in case of a severe error
         context = {
             'usuario': None, 'historico': None, 'ruta_activa': None,
             'total_lecturas': 0, 'lecturas_completadas': 0, 'porcentaje_completado': 0
