@@ -63,7 +63,7 @@
             <thead>
                 <tr>
                     <th>Contrato</th>
-                    <th>Fecha</th>
+                    <th>Fecha Últ. Lectura</th>
                     <th>Nombre</th>
                     <th>Apellido</th>
                     <th>Email</th>
@@ -79,7 +79,7 @@
                 {% for usuario in usuarios %}
                 <tr>
                     <td>{{ usuario.contrato }}</td>
-                    <td>{{ usuario.date|date:"d/m/Y" }}</td>
+                    <td>{{ usuario.fecha_ultima_lectura|date:"d/m/Y" }}</td>
                     <td>{{ usuario.name }}</td>
                     <td>{{ usuario.lastname }}</td>
                     <td>{{ usuario.email }}</td>

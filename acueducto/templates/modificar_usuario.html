@@ -50,129 +50,28 @@
                 </div>
             </form>
 
-            {% if usuario %}
+            {% if form and form.instance.pk %} {# Check if form is bound to an existing user instance #}
+            <h2>Modificar Usuario: {{ form.instance.name }} {{ form.instance.lastname }} (Contrato: {{ form.instance.contrato }})</h2>
             <form method="POST" class="modificar-form" id="modificarForm">
                 {% csrf_token %}
-                <input type="hidden" name="contrato" value="{{ usuario.contrato }}">
-                
-                <div class="form-group">
-                    <label for="name">Nombre:</label>
-                    <input type="text" 
-                           id="name" 
-                           name="name" 
-                           value="{{ usuario.name }}"
-                           required 
-                           class="form-control">
-                </div>
-
-                <div class="form-group">
-                    <label for="lastname">Apellido:</label>
-                    <input type="text" 
-                           id="lastname" 
-                           name="lastname" 
-                           value="{{ usuario.lastname }}"
-                           required 
-                           class="form-control">
-                </div>
-
-                <div class="form-group">
-                    <label for="email">Email:</label>
-                    <input type="email" 
-                           id="email" 
-                           name="email" 
-                           value="{{ usuario.email }}"
-                           required 
-                           class="form-control">
-                </div>
-
-                <div class="form-group">
-                    <label for="phone">Teléfono:</label>
-                    <input type="tel" 
-                           id="phone" 
-                           name="phone" 
-                           value="{{ usuario.phone }}"
-                           class="form-control">
-                </div>
-
-                <div class="form-group">
-                    <label for="categoria">Categoría:</label>
-                    <select id="categoria" name="categoria" required class="form-control">
-                        <option value="">Seleccione una categoría</option>
-                        <option value="residencial" {% if usuario.categoria == 'residencial' %}selected{% endif %}>Residencial</option>
-                        <option value="comercial" {% if usuario.categoria == 'comercial' %}selected{% endif %}>Comercial</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="zona">Zona:</label>
-                    <input type="text" 
-                           id="zona" 
-                           name="zona" 
-                           value="{{ usuario.zona }}"
-                           required 
-                           class="form-control">
-                </div>
-
-                <div class="form-group">
-                    <label for="address">Dirección:</label>
-                    <input type="text" 
-                           id="address" 
-                           name="address" 
-                           value="{{ usuario.address }}"
-                           required 
-                           class="form-control">
-                </div>
-
-                <div class="section-divider">
-                    <h3>Extras</h3>
-                </div>
-
-                <div class="form-group">
-                    <label for="credito_descripcion">Descripción del Crédito:</label>
-                    <textarea id="credito_descripcion" 
-                            name="credito_descripcion" 
-                            class="form-control"
-                            rows="2">{{ usuario.credito_descripcion }}</textarea>
-                </div>
-
-                <div class="form-group">
-                    <label for="credito">Valor del Crédito:</label>
-                    <div class="input-group">
-                        <span class="currency-symbol">$</span>
-                        <input type="number" 
-                               id="credito" 
-                               name="credito" 
-                               value="{{ usuario.credito|default:0 }}"
-                               step="0.01"
-                               class="form-control currency-input">
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="otros_gastos_descripcion">Descripción de Otros Gastos:</label>
-                    <textarea id="otros_gastos_descripcion" 
-                            name="otros_gastos_descripcion" 
-                            class="form-control"
-                            rows="3">{{ usuario.otros_gastos_descripcion }}</textarea>
-                </div>
-
-                <div class="form-group">
-                    <label for="otros_gastos_valor">Valor de Otros Gastos:</label>
-                    <div class="input-group">
-                        <span class="currency-symbol">$</span>
-                        <input type="number" 
-                               id="otros_gastos_valor" 
-                               name="otros_gastos_valor" 
-                               value="{{ usuario.otros_gastos_valor|default:0 }}"
-                               step="0.01"
-                               class="form-control currency-input">
-                    </div>
-                </div>
-
+                {{ form.as_p }}
                 <div class="form-actions">
                     <button type="submit" name="actualizar" class="submit-btn">Actualizar Usuario</button>
                 </div>
             </form>
+            {% elif not contrato_busqueda %}
+                {# Optionally, show the empty form if no search has been made yet #}
+                {# Or remove this elif block if an empty form is not desired initially #}
+                <p>Realice una búsqueda para modificar un usuario o complete el siguiente formulario si desea crear uno (aunque la creación se maneja mejor desde "Crear Usuario").</p>
+                <form method="POST" class="modificar-form" id="modificarForm"> {# This POST would go to modificar_usuario #}
+                    {% csrf_token %}
+                    {{ form.as_p }} {# form would be unbound here if 'usuario' is None #}
+                    <div class="form-actions">
+                        <button type="submit" name="actualizar" class="submit-btn">Guardar Cambios</button>
+                    </div>
+                </form>
+            {% elif contrato_busqueda and not usuario %}
+                 <p>No se encontró ningún usuario con el contrato {{ contrato_busqueda }}.</p>
             {% endif %}
         </div>
     </div>

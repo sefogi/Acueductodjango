@@ -37,106 +37,11 @@
         <div class="form-container">
             <form method="POST" class="create-user-form">
                 {% csrf_token %}
-                <!-- Primera fila: Contrato y Fecha -->
-                <div class="form-group">
-                    <label for="contrato">Contrato:</label>
-                    <input type="text" id="contrato" name="contrato" required>
-                </div>
-                <div class="form-group">
-                    <label for="date">Fecha:</label>
-                    <input type="date" id="date" name="date">
-                </div>
-                <div class="form-group"></div>
-
-                <!-- Segunda fila: Nombre, Apellido, Email -->
-                <div class="form-group">
-                    <label for="name">Nombre:</label>
-                    <input type="text" id="name" name="name" required>
-                </div>
-                <div class="form-group">
-                    <label for="lastname">Apellido:</label>
-                    <input type="text" id="lastname" name="lastname" required>
-                </div>
-                <div class="form-group">
-                    <label for="email">Email:</label>
-                    <input type="email" id="email" name="email" required>
-                </div>
-
-                <!-- Tercera fila: Teléfono, Dirección, Lectura -->
-                <div class="form-group">
-                    <label for="phone">Teléfono:</label>
-                    <input type="tel" id="phone" name="phone">
-                </div>
-                <div class="form-group">
-                    <label for="address">Dirección:</label>
-                    <input type="text" id="address" name="address">
-                </div>
-                <div class="form-group">
-                    <label for="lectura">Lectura:</label>
-                    <input type="number" step="0.01" id="lectura" name="lectura">
-                </div>
-
-                <!-- Cuarta fila: Categoría y Zona -->
-                <div class="form-group">
-                    <label for="categoria">Categoría:</label>
-                    <select id="categoria" name="categoria" required>
-                        <option value="residencial">Residencial</option>
-                        <option value="comercial">Comercial</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="zona">Zona:</label>
-                    <input type="text" id="zona" name="zona" required>
-                </div>
-                <div class="form-group"></div>
-
+                {{ form.as_p }}
                 <button type="submit" class="submit-btn">Crear Usuario</button>
             </form>
         </div>
-
-        {% if usuario_creado %}
-        <div class="user-created">
-            <h2>Usuario Creado:</h2>
-            <table class="users-table">
-                <thead>
-                    <tr>
-                        <th>Contrato</th>
-                        <th>Fecha</th>
-                        <th>Nombre</th>
-                        <th>Apellido</th>
-                        <th>Email</th>
-                        <th>Teléfono</th>
-                        <th>Dirección</th>
-                        <th>Categoría</th>
-                        <th>Zona</th>
-                        <th>Lectura</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>{{ usuario_creado.contrato }}</td>
-                        <td>{{ usuario_creado.date|date:"d/m/Y" }}</td>
-                        <td>{{ usuario_creado.name }}</td>
-                        <td>{{ usuario_creado.lastname }}</td>
-                        <td>{{ usuario_creado.email }}</td>
-                        <td>{{ usuario_creado.phone }}</td>
-                        <td>{{ usuario_creado.address }}</td>
-                        <td>{{ usuario_creado.get_categoria_display }}</td>
-                        <td>{{ usuario_creado.zona }}</td>
-                        <td>{{ usuario_creado.lectura }}</td>
-                    </tr>
-                </tbody>
-            </table>
-            <div class="action-buttons">
-                <a href="{% url 'modificar_usuario' %}?contrato={{ usuario_creado.contrato }}" class="action-btn modify-user">
-                    Modificar Usuario
-                </a>
-                <a href="{% url 'generar_factura' %}?contrato={{ usuario_creado.contrato }}" class="action-btn generate-bill">
-                    Generar Factura
-                </a>
-            </div>
-        </div>
-        {% endif %}
+        <!-- Removed the {% if usuario_creado %} block as messages framework handles success/failure feedback -->
     </div>
 
     <script src="{% static 'scripts.js' %}"></script>
