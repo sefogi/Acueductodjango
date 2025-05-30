@@ -52,10 +52,8 @@
                 <input 
                     type="text" 
                     name="busqueda" 
-                    placeholder="Buscar por contrato o dirección o Zona" 
+                    placeholder="Buscar por contrato o dirección..." 
                     value="{{ busqueda }}"
-
-
                 >
                 <button type="submit" class="search-btn">Buscar</button>
             </form>
@@ -81,7 +79,7 @@
                 {% for usuario in usuarios %}
                 <tr>
                     <td>{{ usuario.contrato }}</td>
-                    <td>{{ usuario.fecha_ultima_lectura|date:"d/m/Y" }}</td>
+                    <td>{{ usuario.date|date:"d/m/Y" }}</td>
                     <td>{{ usuario.name }}</td>
                     <td>{{ usuario.lastname }}</td>
                     <td>{{ usuario.email }}</td>

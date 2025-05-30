@@ -10,48 +10,35 @@ from django.core.mail import EmailMessage
 from django.conf import settings
 from weasyprint import HTML
 from datetime import datetime, timedelta
-from django.utils import timezone # Import timezone
-from django.db import IntegrityError, DatabaseError # Import IntegrityError and DatabaseError
 import tempfile
 import os
-import logging # Import logging
 from io import BytesIO
 import zipfile
 import json
 from .models import UserAcueducto, HistoricoLectura, Ruta, OrdenRuta
 from .utils import formatear_fecha_espanol
-from .forms import UserAcueductoForm # Import the new form
-
-logger = logging.getLogger(__name__) # Initialize logger
 
 # Create your views here.
 def index(request):
+    usuario_creado = None
     if request.method == 'POST':
-        form = UserAcueductoForm(request.POST)
-        if form.is_valid():
-            try:
-                form.save()
-                messages.success(request, 'Usuario creado exitosamente')
-                return redirect('index') # Redirect to avoid form resubmission
-            except IntegrityError as e:
-                logger.error(f"Error de integridad al crear usuario: {e}")
-                # Determine which field caused the error if possible, e.g. by parsing 'e'
-                if 'contrato' in str(e).lower():
-                    form.add_error('contrato', 'Este número de contrato ya existe.')
-                elif 'email' in str(e).lower(): # Assuming email is unique
-                    form.add_error('email', 'Este correo electrónico ya está en uso.')
-                elif 'numero_de_medidor' in str(e).lower():
-                    form.add_error('numero_de_medidor', 'Este número de medidor ya existe.')
-                else:
-                    messages.error(request, f'Error de integridad de datos: {e}. Por favor, revise los campos únicos e intente de nuevo.')
-            except Exception as e: # Catch other potential errors during save
-                logger.error(f"Error inesperado al guardar formulario de creación de usuario: {e}")
-                messages.error(request, f'Ocurrió un error inesperado al crear el usuario: {e}')
-        # If form is not valid (either from initial validation or after adding error from IntegrityError), 
-        # it will be passed to the template with errors
-    else:
-        form = UserAcueductoForm() # Unbound form for GET request
-    return render(request, 'index.html', {'form': form})
+        try:
+            usuario_creado = UserAcueducto.objects.create(
+                contrato=request.POST['contrato'],
+                date=request.POST['date'] or None,
+                name=request.POST['name'],
+                lastname=request.POST['lastname'],
+                email=request.POST['email'],
+                phone=request.POST['phone'],
+                address=request.POST['address'],
+                lectura=request.POST['lectura'] or None,
+                categoria=request.POST['categoria'],
+                zona=request.POST['zona']
+            )
+            messages.success(request, 'Usuario creado exitosamente')
+        except Exception as e:
+            messages.error(request, f'Error al crear usuario: {str(e)}')
+    return render(request, 'index.html', {'usuario_creado': usuario_creado})
 
 def lista_usuarios(request):
     busqueda = request.GET.get('busqueda', '')
@@ -67,18 +54,12 @@ def lista_usuarios(request):
             
             if not nombre_ruta or not usuarios_orden:
                 raise ValueError("Nombre de ruta y usuarios son requeridos")
-
-            now = timezone.now()
-
-            # Deactivate all currently active routes
-            active_routes = Ruta.objects.filter(activa=True)
-            for r in active_routes:
-                r.activa = False
-                r.fecha_finalizacion = now
-                r.save()
+            
+            # Eliminar todas las rutas existentes antes de crear una nueva
+            Ruta.objects.all().delete()
             
             # Crear la nueva ruta
-            ruta = Ruta.objects.create(nombre=nombre_ruta, activa=True)
+            ruta = Ruta.objects.create(nombre=nombre_ruta)
             
             for usuario_data in usuarios_orden:
                 OrdenRuta.objects.create(
@@ -95,8 +76,7 @@ def lista_usuarios(request):
     if busqueda:
         usuarios = usuarios.filter(
             Q(contrato__icontains=busqueda) |
-            Q(address__icontains=busqueda) |
-            Q(zona__icontains=busqueda)
+            Q(address__icontains=busqueda)
         )
     
     return render(request, 'lista_usuarios.html', {
@@ -105,38 +85,13 @@ def lista_usuarios(request):
         'rutas_activas': rutas_activas
     })
 
-def generar_pdf_factura(usuario, fecha_emision, periodo_facturacion, base_url, consecutivo_desde=None, consecutivo_hasta=None):
+def generar_pdf_factura(usuario, fecha_emision, periodo_facturacion, base_url):
     """Genera el PDF de una factura individual"""
     historico_lecturas = usuario.lecturas.all().order_by('-fecha_lectura')[:6]
     lectura_anterior = None
     if len(historico_lecturas) > 1:
         lectura_anterior = historico_lecturas[1]
     
-    # Determine consumo_m3
-    consumo_m3 = 0
-    if lectura_anterior and usuario.lectura is not None and lectura_anterior.lectura is not None:
-        consumo_m3 = usuario.lectura - lectura_anterior.lectura
-    elif usuario.lectura is not None:
-        consumo_m3 = usuario.lectura
-    else:
-        consumo_m3 = 0
-
-    valor_por_m3 = 1000
-    
-    # Calculate costo_consumo_raw based on usuario.lectura
-    if usuario.lectura is not None:
-        costo_consumo_raw = usuario.lectura * valor_por_m3
-    else:
-        costo_consumo_raw = 0
-        
-    costo_consumo_agua_redondeado = round(costo_consumo_raw)
-
-    credito = usuario.credito if usuario.credito is not None else 0
-    otros_gastos = usuario.otros_gastos_valor if usuario.otros_gastos_valor is not None else 0
-
-    total_factura_raw = costo_consumo_agua_redondeado + float(credito) + float(otros_gastos)
-    total_factura_redondeado = round(total_factura_raw)
-
     template = get_template('factura_template.html')
     context = {
         'usuario': usuario,
@@ -144,11 +99,6 @@ def generar_pdf_factura(usuario, fecha_emision, periodo_facturacion, base_url, c
         'lectura_anterior': lectura_anterior,
         'fecha_emision': fecha_emision,
         'periodo_facturacion': periodo_facturacion,
-        'costo_consumo_agua_redondeado': costo_consumo_agua_redondeado,
-        'total_factura_redondeado': total_factura_redondeado,
-        'valor_por_m3': valor_por_m3,
-        'consecutivo_desde': consecutivo_desde,
-        'consecutivo_hasta': consecutivo_hasta,
     }
     html = template.render(context)
     
@@ -178,14 +128,13 @@ def generar_todas_facturas(periodo_inicio, periodo_fin):
     
     zip_buffer = BytesIO()
     base_url = settings.BASE_DIR / 'acueducto' / 'static'
-    errores_facturacion = []
     
     with zipfile.ZipFile(zip_buffer, 'w') as zip_file:
         for usuario in UserAcueducto.objects.all():
             try:
                 pdf_file = generar_pdf_factura(
                     usuario=usuario,
-                    fecha_emision=timezone.now(),
+                    fecha_emision=datetime.now(),
                     periodo_facturacion=periodo_facturacion,
                     base_url=base_url
                 )
@@ -195,27 +144,11 @@ def generar_todas_facturas(periodo_inicio, periodo_fin):
                 
                 os.unlink(pdf_file.name)
             except Exception as e:
-                error_msg = f'Error al generar factura para {usuario.contrato}: {str(e)}'
-                logger.error(error_msg)
-                errores_facturacion.append(f"Error para {usuario.contrato}: {str(e)}")
-                continue # Continue to the next user
+                raise Exception(f'Error al generar factura para {usuario.contrato}: {str(e)}')
     
-    # This message might not be directly visible to the user with a file download response,
-    # but it's good practice. Logging is the more reliable way to track these errors.
-    if errores_facturacion:
-        # Note: messages added here won't be seen if the view returns a direct HttpResponse (like a file download)
-        # This message would typically be displayed on the next rendered page if a redirect occurred.
-        # For a direct file download, this message might not show up easily.
-        # We will add it for completeness, assuming the calling view might handle it or for logging.
-        # A better UX would be to show a summary page after the download attempt.
-        # For now, we'll store it in a way the calling view `generar_factura` can potentially access it.
-        # This function returns zip_buffer, so it can't add messages to request directly.
-        # Instead, it can return errors along with the buffer.
-        return zip_buffer, errores_facturacion # Return errors along with the buffer
-        
-    return zip_buffer, None # No errors
+    return zip_buffer
 
-def generar_factura_individual(contrato, fecha_emision, periodo_inicio, periodo_fin, consecutivo_desde=None, consecutivo_hasta=None):
+def generar_factura_individual(contrato, fecha_emision, periodo_inicio, periodo_fin):
     """Genera una factura individual"""
     if not all([periodo_inicio, periodo_fin]):
         raise ValueError('Por favor, especifique el período de facturación')
@@ -229,126 +162,51 @@ def generar_factura_individual(contrato, fecha_emision, periodo_inicio, periodo_
     
     return generar_pdf_factura(
         usuario=usuario,
-        fecha_emision=fecha_emision or timezone.now(),
+        fecha_emision=fecha_emision or datetime.now(),
         periodo_facturacion=periodo_facturacion,
-        base_url=base_url,
-        consecutivo_desde=consecutivo_desde,
-        consecutivo_hasta=consecutivo_hasta
+        base_url=base_url
     )
 
 def generar_factura(request):
     """Vista principal para la generación de facturas"""
     contrato_preseleccionado = request.GET.get('contrato', '')
-    fecha_actual = timezone.now()
+    fecha_actual = datetime.now()
     
     if request.method == 'POST':
-        pdf_file_path = None # Initialize here for broader scope in finally
         try:
             if 'generar_todas' in request.POST:
-                periodo_inicio_todas_str = request.POST.get('periodo_inicio_todas')
-                periodo_fin_todas_str = request.POST.get('periodo_fin_todas')
-
-                # Validate dates for generar_todas_facturas
-                try:
-                    if periodo_inicio_todas_str:
-                        datetime.strptime(periodo_inicio_todas_str, '%Y-%m-%d')
-                    if periodo_fin_todas_str:
-                        datetime.strptime(periodo_fin_todas_str, '%Y-%m-%d')
-                except ValueError as ve:
-                    logger.error(f"Error de formato de fecha en generación masiva: {ve}")
-                    messages.error(request, f"Formato de fecha inválido para período en generación masiva. Use YYYY-MM-DD. Error: {ve}")
-                    return redirect('generar_factura')
-
-                zip_buffer, errores = generar_todas_facturas(
-                    periodo_inicio_todas_str,
-                    periodo_fin_todas_str
+                zip_buffer = generar_todas_facturas(
+                    request.POST.get('periodo_inicio_todas'),
+                    request.POST.get('periodo_fin_todas')
                 )
                 
-                if errores:
-                    error_list_str = "\n - ".join(errores)
-                    messages.warning(request, f"Se generaron las facturas, pero con los siguientes errores:\n - {error_list_str}")
-
                 response = HttpResponse(zip_buffer.getvalue(), content_type='application/zip')
                 response['Content-Disposition'] = 'attachment; filename="todas_las_facturas.zip"'
                 return response
             else:
-                # Individual invoice generation
-                contrato = request.POST.get('contrato')
-                fecha_emision_str = request.POST.get('fecha_emision')
-                periodo_inicio_str = request.POST.get('periodo_inicio')
-                periodo_fin_str = request.POST.get('periodo_fin')
-
-                fecha_emision = None
-                if fecha_emision_str:
-                    try:
-                        fecha_emision = datetime.strptime(fecha_emision_str, '%Y-%m-%d')
-                    except ValueError:
-                        messages.error(request, "Formato de fecha inválido para 'Fecha de Emisión'. Use YYYY-MM-DD.")
-                        return redirect('generar_factura')
-
-                # Basic validation for period dates before calling generar_factura_individual
-                # More specific errors for these dates will come from generar_factura_individual if they are invalid
-                if not periodo_inicio_str or not periodo_fin_str:
-                    messages.error(request, "Debe especificar 'Período Desde' y 'Período Hasta' para la factura individual.")
-                    return redirect('generar_factura')
-
-                try:
-                    # Try to parse period dates here to give early feedback if format is wrong
-                    datetime.strptime(periodo_inicio_str, '%Y-%m-%d')
-                    datetime.strptime(periodo_fin_str, '%Y-%m-%d')
-                except ValueError as ve:
-                    logger.error(f"Error de formato de fecha en período para factura individual: {ve}")
-                    messages.error(request, f"Formato de fecha inválido para período de facturación. Use YYYY-MM-DD. Error: {ve}")
-                    return redirect('generar_factura')
-
-                pdf_file_obj = generar_factura_individual(
-                    contrato=contrato,
-                    fecha_emision=fecha_emision, # Already a datetime object or None
-                    periodo_inicio=periodo_inicio_str,
-                    periodo_fin=periodo_fin_str,
-                    consecutivo_desde=request.POST.get('consecutivo_desde'),
-                    consecutivo_hasta=request.POST.get('consecutivo_hasta')
+                pdf_file = generar_factura_individual(
+                    contrato=request.POST.get('contrato'),
+                    fecha_emision=datetime.strptime(request.POST.get('fecha_emision'), '%Y-%m-%d') if request.POST.get('fecha_emision') else None,
+                    periodo_inicio=request.POST.get('periodo_inicio'),
+                    periodo_fin=request.POST.get('periodo_fin')
                 )
-                pdf_file_path = pdf_file_obj.name # Store path for finally block
                 
                 if 'enviar_email' in request.POST:
-                    try:
-                        usuario = UserAcueducto.objects.get(contrato=contrato)
-                        enviar_factura_email(usuario, pdf_file_obj)
-                        messages.success(request, 'Factura enviada por correo exitosamente')
-                        # os.unlink(pdf_file_path) # Moved to finally
-                        return redirect('generar_factura')
-                    except UserAcueducto.DoesNotExist:
-                        messages.error(request, f"Usuario con contrato '{contrato}' no encontrado para enviar email.")
-                        return redirect('generar_factura')
-                    except Exception as email_exc: # Catch specific email sending errors if possible
-                        logger.error(f"Error al enviar email para contrato {contrato}: {email_exc}")
-                        messages.error(request, f"Error al enviar la factura por correo: {email_exc}")
-                        return redirect('generar_factura')
-                    # finally for email sending part is handled by the main finally
+                    usuario = UserAcueducto.objects.get(contrato=request.POST.get('contrato'))
+                    enviar_factura_email(usuario, pdf_file)
+                    messages.success(request, 'Factura enviada por correo exitosamente')
+                    os.unlink(pdf_file.name)
+                    return redirect('generar_factura')
                 
-                else: # Display PDF inline
-                    with open(pdf_file_path, 'rb') as pdf:
-                        response = HttpResponse(pdf.read(), content_type='application/pdf')
-                        response['Content-Disposition'] = f'inline; filename="factura_{contrato}.pdf"'
-                        # os.unlink(pdf_file_path) # Moved to finally
-                        return response
-
-        except ValueError as ve: # Catch ValueErrors specifically, e.g. from generar_factura_individual date parsing
-            logger.error(f"Error de valor al generar factura: {ve}")
-            messages.error(request, f'Error en los datos para generar la factura: {str(ve)}. Por favor, revise las fechas e inténtelo de nuevo.')
-            return redirect('generar_factura')
+                with open(pdf_file.name, 'rb') as pdf:
+                    response = HttpResponse(pdf.read(), content_type='application/pdf')
+                    response['Content-Disposition'] = f'inline; filename="factura_{request.POST.get("contrato")}.pdf"'
+                    os.unlink(pdf_file.name)
+                    return response
+                    
         except Exception as e:
-            logger.error(f"Error general al generar factura: {e}")
             messages.error(request, f'Error al generar la factura: {str(e)}')
             return redirect('generar_factura')
-        finally:
-            if pdf_file_path and os.path.exists(pdf_file_path):
-                try:
-                    os.unlink(pdf_file_path)
-                    logger.info(f"Archivo temporal {pdf_file_path} eliminado.")
-                except OSError as unlink_error:
-                    logger.error(f"Error al eliminar el archivo temporal {pdf_file_path}: {unlink_error}")
     
     usuarios = UserAcueducto.objects.all().order_by('contrato')
     busqueda_contrato = request.GET.get('busqueda_contrato', '')
@@ -377,7 +235,6 @@ def buscar_usuario_por_contrato(request):
             return JsonResponse({'found': False})
     return JsonResponse({'found': False})
 
-
 def login_view(request):
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -394,138 +251,72 @@ def logout_view(request):
     logout(request)
     return redirect('login')
 
-def _get_active_route_details():
-    """
-    Queries for an active route and calculates its details.
-    Returns:
-        tuple: (Ruta|None, total_lecturas, lecturas_completadas, porcentaje_completado)
-    """
-    try:
-        ruta = Ruta.objects.filter(activa=True).prefetch_related(
-            'ordenruta_set__usuario',
-            'ordenruta_set__usuario__lecturas'  # Assuming 'lecturas' is the related_name for HistoricoLectura on UserAcueducto
-        ).first()
-
-        if ruta:
-            total_lecturas = ruta.ordenruta_set.count()
-            lecturas_completadas = ruta.ordenruta_set.filter(lectura_tomada=True).count()
-            if total_lecturas > 0:
-                porcentaje_completado = (lecturas_completadas / total_lecturas) * 100
-            else:
-                porcentaje_completado = 0
-            return ruta, total_lecturas, lecturas_completadas, porcentaje_completado
-        else:
-            return None, 0, 0, 0
-    except Exception as e: # Broad exception to catch any issue during query/calculation
-        logger.error(f"Error in _get_active_route_details: {e}")
-        return None, 0, 0, 0
-
-def _handle_lectura_submission(request, ruta, usuario_contrato, nueva_lectura_str):
-    """
-    Handles the submission of a new lectura.
-    Returns:
-        tuple: (UserAcueducto|None, historico_list|None)
-    """
-    usuario = None
-    try:
-        usuario = UserAcueducto.objects.get(contrato=usuario_contrato)
-    except UserAcueducto.DoesNotExist:
-        messages.error(request, "Usuario no encontrado")
-        return None, None
-
-    try:
-        fecha_actual = timezone.now().date()
-        
-        # Crear el histórico de lectura
-        HistoricoLectura.objects.create(
-            usuario=usuario,
-            lectura=nueva_lectura_str,
-            fecha_lectura=fecha_actual
-        )
-        
-        # Actualizar la lectura actual del usuario
-        usuario.lectura = nueva_lectura_str
-        usuario.fecha_ultima_lectura = fecha_actual
-        usuario.save()
-        
-        # Actualizar el estado de la lectura en la ruta si existe
-        if ruta:
-            orden_ruta = ruta.ordenruta_set.filter(usuario=usuario).first()
-            if orden_ruta:
-                orden_ruta.lectura_tomada = True
-                orden_ruta.save()
-        
-        messages.success(request, "Lectura registrada exitosamente")
-        historico = usuario.lecturas.all().order_by('-fecha_lectura')[:6]
-        return usuario, list(historico)
-    
-    except IntegrityError as ie:
-        logger.error(f"Error de integridad al guardar lectura para {usuario_contrato}: {ie}")
-        messages.error(request, f"Error de integridad de datos al guardar la lectura: {ie}")
-        return usuario, None
-    except DatabaseError as de:
-        logger.error(f"Error de base de datos al guardar lectura para {usuario_contrato}: {de}")
-        messages.error(request, f"Error de base de datos al guardar la lectura: {de}")
-        return usuario, None
-    except Exception as e:
-        logger.error(f"Error inesperado al guardar lectura para {usuario_contrato}: {e}")
-        messages.error(request, f"Error inesperado al guardar la lectura: {e}")
-        return usuario, None
-
-def _get_user_data_for_display(request, contrato_str):
-    """
-    Fetches user and their historico for display.
-    Returns:
-        tuple: (UserAcueducto|None, historico_list|None)
-    """
-    if not contrato_str: # Handle empty contrato_str if it can occur
-        # messages.error(request, "Número de contrato no proporcionado.") # Optional: if empty string is invalid
-        return None, None
-    try:
-        usuario = UserAcueducto.objects.get(contrato=contrato_str)
-        historico = usuario.lecturas.all().order_by('-fecha_lectura')[:6]
-        return usuario, list(historico)
-    except UserAcueducto.DoesNotExist:
-        messages.error(request, "Usuario no encontrado")
-        return None, None
-    except Exception as e:
-        logger.error(f"Error inesperado al obtener datos de usuario para {contrato_str}: {e}")
-        messages.error(request, f"Error inesperado al obtener datos del usuario: {e}")
-        return None, None
-
 @login_required(login_url='login')
 def toma_lectura(request):
+    mensaje = None
     usuario = None
     historico = None
     
-    # Attempt to get active route details first
-    ruta, total_lecturas, lecturas_completadas, porcentaje_completado = _get_active_route_details()
-
     try:
-        if request.method == 'POST':
-            contrato_str = request.POST.get('contrato')
-            nueva_lectura_str = request.POST.get('lectura')
-            # _handle_lectura_submission will set messages for success/failure
-            usuario, historico = _handle_lectura_submission(request, ruta, contrato_str, nueva_lectura_str)
-            # If submission was successful and route details were updated, refresh them
-            if usuario and historico and ruta: # Check if submission was successful
-                 # Re-fetch route details if a reading was successfully taken, to update completion stats
-                 ruta, total_lecturas, lecturas_completadas, porcentaje_completado = _get_active_route_details()
-
-        elif request.method == 'GET':
-            contrato_str = request.GET.get('contrato')
-            if contrato_str:
-                # _get_user_data_for_display will set messages if user not found
-                usuario, historico = _get_user_data_for_display(request, contrato_str)
+        # Obtener la ruta activa
+        ruta = Ruta.objects.filter(activa=True).prefetch_related(
+            'ordenruta_set__usuario',
+            'ordenruta_set__usuario__lecturas'
+        ).first()
         
-        # After POST or GET, if ruta is None (no active route or error fetching it), add info message.
-        # This replaces the old Ruta.DoesNotExist block logic.
-        if ruta is None:
-            messages.info(request, "No hay ruta activa disponible en este momento.")
-            # Ensure default values for context if ruta is None
-            total_lecturas, lecturas_completadas, porcentaje_completado = 0, 0, 0
+        if ruta:
+            total_lecturas = ruta.ordenruta_set.count()
+            lecturas_completadas = ruta.ordenruta_set.filter(lectura_tomada=True).count()
+            porcentaje_completado = (lecturas_completadas / total_lecturas * 100) if total_lecturas > 0 else 0
+        else:
+            total_lecturas = 0
+            lecturas_completadas = 0
+            porcentaje_completado = 0
+        
+        if request.method == 'POST':
+            contrato = request.POST.get('contrato')
+            nueva_lectura = request.POST.get('lectura')
+            try:
+                usuario = UserAcueducto.objects.get(contrato=contrato)
+                from django.utils import timezone
+                fecha_actual = timezone.now().date()
+                
+                # Crear el histórico de lectura
+                HistoricoLectura.objects.create(
+                    usuario=usuario,
+                    lectura=nueva_lectura,
+                    fecha_lectura=fecha_actual
+                )
+                
+                # Actualizar la lectura actual del usuario
+                usuario.lectura = nueva_lectura
+                usuario.date = fecha_actual
+                usuario.save()
+                
+                # Actualizar el estado de la lectura en la ruta si existe
+                if ruta:
+                    orden_ruta = ruta.ordenruta_set.filter(usuario=usuario).first()
+                    if orden_ruta:
+                        orden_ruta.lectura_tomada = True
+                        orden_ruta.save()
+                
+                mensaje = "Lectura registrada exitosamente"
+                historico = usuario.lecturas.all()[:6]
+                
+            except UserAcueducto.DoesNotExist:
+                mensaje = "Usuario no encontrado"
+        
+        elif request.method == 'GET':
+            contrato = request.GET.get('contrato')
+            if contrato:
+                try:
+                    usuario = UserAcueducto.objects.get(contrato=contrato)
+                    historico = usuario.lecturas.all()[:6]
+                except UserAcueducto.DoesNotExist:
+                    mensaje = "Usuario no encontrado"
 
         context = {
+            'mensaje': mensaje,
             'usuario': usuario,
             'historico': historico,
             'ruta_activa': ruta,
@@ -533,41 +324,33 @@ def toma_lectura(request):
             'lecturas_completadas': lecturas_completadas,
             'porcentaje_completado': porcentaje_completado
         }
+        
         return render(request, 'toma_lectura.html', context)
-
-    except Exception as e: # Catch-all for any other unexpected errors
-        logger.error(f'Error inesperado al cargar la página de toma de lectura: {str(e)}')
-        messages.error(request, f'Error inesperado al cargar la página: {str(e)}')
-        # Render with minimal context in case of a severe error
-        context = {
-            'usuario': None, 'historico': None, 'ruta_activa': None,
-            'total_lecturas': 0, 'lecturas_completadas': 0, 'porcentaje_completado': 0
-        }
-        return render(request, 'toma_lectura.html', context)
+        
+    except Exception as e:
+        messages.error(request, f'Error al cargar la ruta: {str(e)}')
+        return render(request, 'toma_lectura.html')
 
 @require_POST
 def guardar_lectura(request):
     try:
         data = json.loads(request.body)
         usuario_id = data.get('usuario_id')
-        lectura_valor = data.get('lectura') # Renamed to avoid conflict with model field name
-
-        if not all([usuario_id, lectura_valor]):
-            return JsonResponse({'success': False, 'error': 'Faltan datos: usuario_id o lectura.'}, status=400)
+        lectura = data.get('lectura')
 
         usuario = get_object_or_404(UserAcueducto, id=usuario_id)
-        fecha_actual = timezone.now().date()
+        fecha_actual = datetime.now().date()
 
         # Guardar la lectura en el histórico
         HistoricoLectura.objects.create(
             usuario=usuario,
-            lectura=lectura_valor,
+            lectura=lectura,
             fecha_lectura=fecha_actual
         )
 
         # Actualizar la lectura actual del usuario
-        usuario.lectura = lectura_valor
-        usuario.fecha_ultima_lectura = fecha_actual # Renamed from date
+        usuario.lectura = lectura
+        usuario.date = fecha_actual
         usuario.save()
 
         # Actualizar el estado de la lectura en la ruta activa
@@ -582,21 +365,12 @@ def guardar_lectura(request):
             'success': True,
             'message': 'Lectura guardada exitosamente'
         })
-    except UserAcueducto.DoesNotExist:
-        logger.warning(f"guardar_lectura: Usuario no encontrado con ID {data.get('usuario_id')}")
-        return JsonResponse({'success': False, 'error': 'Usuario no encontrado.'}, status=404)
-    except (IntegrityError, DatabaseError) as db_error:
-        logger.error(f"guardar_lectura: Error de base de datos para usuario ID {data.get('usuario_id')}: {db_error}")
-        return JsonResponse({'success': False, 'error': f'Error de base de datos: {str(db_error)}'}, status=500)
-    except json.JSONDecodeError:
-        logger.error("guardar_lectura: Error al decodificar JSON del request body.")
-        return JsonResponse({'success': False, 'error': 'Error en el formato de los datos enviados (JSON inválido).'}, status=400)
+
     except Exception as e:
-        logger.error(f"guardar_lectura: Error inesperado para usuario ID {data.get('usuario_id')}: {e}")
         return JsonResponse({
             'success': False,
-            'error': f'Ocurrió un error inesperado: {str(e)}'
-        }, status=500) # 500 for truly unexpected server errors
+            'error': str(e)
+        }, status=400)
 
 @login_required
 def finalizar_ruta(request):
@@ -604,43 +378,30 @@ def finalizar_ruta(request):
         try:
             data = json.loads(request.body)
             ruta_id = data.get('ruta_id')
-
-            if not ruta_id:
-                 return JsonResponse({'error': 'Falta ruta_id.'}, status=400)
             
             ruta = get_object_or_404(Ruta, id=ruta_id)
             
             # Verificar que todas las lecturas estén tomadas
             lecturas_pendientes = ruta.ordenruta_set.filter(lectura_tomada=False).exists()
             if lecturas_pendientes:
-                logger.warning(f"Intento de finalizar ruta {ruta_id} con lecturas pendientes.")
                 return JsonResponse({
                     'error': 'No se puede finalizar la ruta. Hay lecturas pendientes.'
-                }, status=400) # Bad request, client side error
+                }, status=400)
             
             # Marcar la ruta como finalizada
+            from django.utils import timezone
             ruta.activa = False
-            ruta.fecha_finalizacion = timezone.now() # Ensure timezone is imported if not already
+            ruta.fecha_finalizacion = timezone.now()
             ruta.save()
             
-            logger.info(f"Ruta {ruta_id} finalizada exitosamente.")
             return JsonResponse({
                 'message': 'Ruta finalizada exitosamente',
-                'redirect': reverse('toma_lectura') # Use reverse for URL
+                'redirect': '/toma-lectura/'
             })
-        except Ruta.DoesNotExist:
-            logger.warning(f"finalizar_ruta: Ruta no encontrada con ID {data.get('ruta_id')}")
-            return JsonResponse({'error': 'Ruta no encontrada.'}, status=404)
-        except (IntegrityError, DatabaseError) as db_error:
-            logger.error(f"finalizar_ruta: Error de base de datos para ruta ID {data.get('ruta_id')}: {db_error}")
-            return JsonResponse({'error': f'Error de base de datos: {str(db_error)}'}, status=500)
-        except json.JSONDecodeError:
-            logger.error("finalizar_ruta: Error al decodificar JSON del request body.")
-            return JsonResponse({'error': 'Error en el formato de los datos enviados (JSON inválido).'}, status=400)    
+            
         except Exception as e:
-            logger.error(f"finalizar_ruta: Error inesperado para ruta ID {data.get('ruta_id')}: {e}")
             return JsonResponse({
-                'error': f'Ocurrió un error inesperado: {str(e)}'
+                'error': f'Error al finalizar la ruta: {str(e)}'
             }, status=500)
             
     return JsonResponse({'error': 'Método no permitido'}, status=405)
@@ -659,66 +420,42 @@ def historico_lecturas(request, contrato):
         messages.error(request, f'Error al cargar el histórico de lecturas: {str(e)}')
         return redirect('lista_usuarios')
 
-from django.urls import reverse # Make sure reverse is imported
-
 @login_required(login_url='login')
 def modificar_usuario(request):
     contrato_busqueda = request.GET.get('contrato')
     usuario = None
-    form = None
-
     if contrato_busqueda:
-        try:
-            usuario = get_object_or_404(UserAcueducto, contrato=contrato_busqueda)
-            form = UserAcueductoForm(instance=usuario)
-        except UserAcueducto.DoesNotExist:
-            messages.error(request, f"No se encontró usuario con contrato '{contrato_busqueda}'.")
-            # Keep contrato_busqueda for the template to show what was searched
+        usuario = get_object_or_404(UserAcueducto, contrato=contrato_busqueda)
     
     if request.method == 'POST':
-        # This 'contrato' hidden input is crucial for identifying the user to update
-        posted_contrato = request.POST.get('contrato')
-        if not posted_contrato:
-            messages.error(request, "No se especificó el contrato del usuario a modificar.")
-            return redirect('modificar_usuario')
-
+        contrato = request.POST.get('contrato')
+        usuario = get_object_or_404(UserAcueducto, contrato=contrato)
+        
         try:
-            usuario = get_object_or_404(UserAcueducto, contrato=posted_contrato)
-            form = UserAcueductoForm(request.POST, instance=usuario)
-            if form.is_valid():
-                form.save()
-                messages.success(request, 'Usuario actualizado exitosamente')
-                # Redirect to the same page with GET parameter to show the updated user
-                return redirect(f"{reverse('modificar_usuario')}?contrato={usuario.contrato}")
-            else:
-                # Form has errors, it will be re-rendered with errors
-                messages.error(request, 'Error al actualizar usuario. Por favor revise los datos.')
-        except UserAcueducto.DoesNotExist: # Raised by get_object_or_404 if user not found
-            logger.warning(f"Intento de actualizar usuario no existente con contrato '{posted_contrato}'.")
-            messages.error(request, f"No se encontró usuario con contrato '{posted_contrato}' para actualizar.")
-            return redirect('modificar_usuario') # Redirect to clean search state
-        except IntegrityError as e:
-            logger.error(f"Error de integridad al actualizar usuario {posted_contrato}: {e}")
-            if 'contrato' in str(e).lower():
-                 form.add_error('contrato', 'Este número de contrato ya existe para otro usuario.')
-            elif 'email' in str(e).lower():
-                 form.add_error('email', 'Este correo electrónico ya está en uso por otro usuario.')
-            else:
-                messages.error(request, f"Error de integridad de datos al actualizar: {e}. Es posible que algunos datos ya existan.")
-            # form will be re-rendered with these errors
+            # Actualizar los campos básicos
+            usuario.name = request.POST.get('name')
+            usuario.lastname = request.POST.get('lastname')
+            usuario.email = request.POST.get('email')
+            usuario.phone = request.POST.get('phone')
+            usuario.address = request.POST.get('address')
+            usuario.categoria = request.POST.get('categoria')
+            usuario.zona = request.POST.get('zona')
+            
+            # Actualizar crédito y otros gastos
+            usuario.credito = request.POST.get('credito', 0)
+            usuario.credito_descripcion = request.POST.get('credito_descripcion', '')
+            usuario.otros_gastos_valor = request.POST.get('otros_gastos_valor', 0)
+            usuario.otros_gastos_descripcion = request.POST.get('otros_gastos_descripcion', '')
+            
+            usuario.save()
+            messages.success(request, 'Usuario actualizado exitosamente')
+            
         except Exception as e:
-            logger.error(f"Error inesperado al actualizar usuario {posted_contrato}: {e}")
-            messages.error(request, f'Ocurrió un error inesperado al actualizar el usuario: {str(e)}')
-            # If an unexpected error occurs, we might want to re-render the form if 'usuario' and 'form' are defined
-            # or redirect to a clean state. For now, let the form be re-rendered if possible.
-            if usuario and form is None: # If form wasn't initialized due to early error (unlikely here as form is defined before this try)
-                 form = UserAcueductoForm(request.POST, instance=usuario) # Attempt to show data trying to be saved
-
-    context = {
-        'form': form,
-        'usuario': usuario, # This will be None if not found by GET, or the instance
+            messages.error(request, f'Error al actualizar usuario: {str(e)}')
+    
+    return render(request, 'modificar_usuario.html', {
+        'usuario': usuario,
         'contrato_busqueda': contrato_busqueda
-    }
-    return render(request, 'modificar_usuario.html', context)
+    })
 
 

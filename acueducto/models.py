@@ -9,8 +9,7 @@ class UserAcueducto(models.Model):
     ]
     
     contrato = models.CharField(max_length=100, unique=True)
-    numero_de_medidor = models.CharField(max_length=50, unique=True, blank=True, null=True)
-    fecha_ultima_lectura = models.DateField(blank=True, null=True) # Renamed from 'date', removed max_length
+    date = models.DateField(max_length=10, blank=True, null=True)
     name = models.CharField(max_length=100)
     lastname = models.CharField(max_length=100)
     email = models.EmailField(max_length=100, unique=True)
