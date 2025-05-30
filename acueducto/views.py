@@ -40,8 +40,10 @@ def index(request):
                     form.add_error('contrato', 'Este número de contrato ya existe.')
                 elif 'email' in str(e).lower(): # Assuming email is unique
                     form.add_error('email', 'Este correo electrónico ya está en uso.')
+                elif 'numero_de_medidor' in str(e).lower():
+                    form.add_error('numero_de_medidor', 'Este número de medidor ya existe.')
                 else:
-                    messages.error(request, f'Error de integridad de datos: {e}. Por favor, revise los campos únicos.')
+                    messages.error(request, f'Error de integridad de datos: {e}. Por favor, revise los campos únicos e intente de nuevo.')
             except Exception as e: # Catch other potential errors during save
                 logger.error(f"Error inesperado al guardar formulario de creación de usuario: {e}")
                 messages.error(request, f'Ocurrió un error inesperado al crear el usuario: {e}')
@@ -240,45 +242,113 @@ def generar_factura(request):
     fecha_actual = timezone.now()
     
     if request.method == 'POST':
+        pdf_file_path = None # Initialize here for broader scope in finally
         try:
             if 'generar_todas' in request.POST:
+                periodo_inicio_todas_str = request.POST.get('periodo_inicio_todas')
+                periodo_fin_todas_str = request.POST.get('periodo_fin_todas')
+
+                # Validate dates for generar_todas_facturas
+                try:
+                    if periodo_inicio_todas_str:
+                        datetime.strptime(periodo_inicio_todas_str, '%Y-%m-%d')
+                    if periodo_fin_todas_str:
+                        datetime.strptime(periodo_fin_todas_str, '%Y-%m-%d')
+                except ValueError as ve:
+                    logger.error(f"Error de formato de fecha en generación masiva: {ve}")
+                    messages.error(request, f"Formato de fecha inválido para período en generación masiva. Use YYYY-MM-DD. Error: {ve}")
+                    return redirect('generar_factura')
+
                 zip_buffer, errores = generar_todas_facturas(
-                    request.POST.get('periodo_inicio_todas'),
-                    request.POST.get('periodo_fin_todas')
+                    periodo_inicio_todas_str,
+                    periodo_fin_todas_str
                 )
                 
                 if errores:
-                    messages.warning(request, f"Se generaron las facturas, pero con errores: {'; '.join(errores)}")
+                    error_list_str = "\n - ".join(errores)
+                    messages.warning(request, f"Se generaron las facturas, pero con los siguientes errores:\n - {error_list_str}")
 
                 response = HttpResponse(zip_buffer.getvalue(), content_type='application/zip')
                 response['Content-Disposition'] = 'attachment; filename="todas_las_facturas.zip"'
                 return response
             else:
-                pdf_file = generar_factura_individual(
-                    contrato=request.POST.get('contrato'),
-                    fecha_emision=datetime.strptime(request.POST.get('fecha_emision'), '%Y-%m-%d') if request.POST.get('fecha_emision') else None,
-                    periodo_inicio=request.POST.get('periodo_inicio'),
-                    periodo_fin=request.POST.get('periodo_fin'),
+                # Individual invoice generation
+                contrato = request.POST.get('contrato')
+                fecha_emision_str = request.POST.get('fecha_emision')
+                periodo_inicio_str = request.POST.get('periodo_inicio')
+                periodo_fin_str = request.POST.get('periodo_fin')
+
+                fecha_emision = None
+                if fecha_emision_str:
+                    try:
+                        fecha_emision = datetime.strptime(fecha_emision_str, '%Y-%m-%d')
+                    except ValueError:
+                        messages.error(request, "Formato de fecha inválido para 'Fecha de Emisión'. Use YYYY-MM-DD.")
+                        return redirect('generar_factura')
+
+                # Basic validation for period dates before calling generar_factura_individual
+                # More specific errors for these dates will come from generar_factura_individual if they are invalid
+                if not periodo_inicio_str or not periodo_fin_str:
+                    messages.error(request, "Debe especificar 'Período Desde' y 'Período Hasta' para la factura individual.")
+                    return redirect('generar_factura')
+
+                try:
+                    # Try to parse period dates here to give early feedback if format is wrong
+                    datetime.strptime(periodo_inicio_str, '%Y-%m-%d')
+                    datetime.strptime(periodo_fin_str, '%Y-%m-%d')
+                except ValueError as ve:
+                    logger.error(f"Error de formato de fecha en período para factura individual: {ve}")
+                    messages.error(request, f"Formato de fecha inválido para período de facturación. Use YYYY-MM-DD. Error: {ve}")
+                    return redirect('generar_factura')
+
+                pdf_file_obj = generar_factura_individual(
+                    contrato=contrato,
+                    fecha_emision=fecha_emision, # Already a datetime object or None
+                    periodo_inicio=periodo_inicio_str,
+                    periodo_fin=periodo_fin_str,
                     consecutivo_desde=request.POST.get('consecutivo_desde'),
                     consecutivo_hasta=request.POST.get('consecutivo_hasta')
                 )
+                pdf_file_path = pdf_file_obj.name # Store path for finally block
                 
                 if 'enviar_email' in request.POST:
-                    usuario = UserAcueducto.objects.get(contrato=request.POST.get('contrato'))
-                    enviar_factura_email(usuario, pdf_file)
-                    messages.success(request, 'Factura enviada por correo exitosamente')
-                    os.unlink(pdf_file.name)
-                    return redirect('generar_factura')
+                    try:
+                        usuario = UserAcueducto.objects.get(contrato=contrato)
+                        enviar_factura_email(usuario, pdf_file_obj)
+                        messages.success(request, 'Factura enviada por correo exitosamente')
+                        # os.unlink(pdf_file_path) # Moved to finally
+                        return redirect('generar_factura')
+                    except UserAcueducto.DoesNotExist:
+                        messages.error(request, f"Usuario con contrato '{contrato}' no encontrado para enviar email.")
+                        return redirect('generar_factura')
+                    except Exception as email_exc: # Catch specific email sending errors if possible
+                        logger.error(f"Error al enviar email para contrato {contrato}: {email_exc}")
+                        messages.error(request, f"Error al enviar la factura por correo: {email_exc}")
+                        return redirect('generar_factura')
+                    # finally for email sending part is handled by the main finally
                 
-                with open(pdf_file.name, 'rb') as pdf:
-                    response = HttpResponse(pdf.read(), content_type='application/pdf')
-                    response['Content-Disposition'] = f'inline; filename="factura_{request.POST.get("contrato")}.pdf"'
-                    os.unlink(pdf_file.name)
-                    return response
-                    
+                else: # Display PDF inline
+                    with open(pdf_file_path, 'rb') as pdf:
+                        response = HttpResponse(pdf.read(), content_type='application/pdf')
+                        response['Content-Disposition'] = f'inline; filename="factura_{contrato}.pdf"'
+                        # os.unlink(pdf_file_path) # Moved to finally
+                        return response
+
+        except ValueError as ve: # Catch ValueErrors specifically, e.g. from generar_factura_individual date parsing
+            logger.error(f"Error de valor al generar factura: {ve}")
+            messages.error(request, f'Error en los datos para generar la factura: {str(ve)}. Por favor, revise las fechas e inténtelo de nuevo.')
+            return redirect('generar_factura')
         except Exception as e:
+            logger.error(f"Error general al generar factura: {e}")
             messages.error(request, f'Error al generar la factura: {str(e)}')
             return redirect('generar_factura')
+        finally:
+            if pdf_file_path and os.path.exists(pdf_file_path):
+                try:
+                    os.unlink(pdf_file_path)
+                    logger.info(f"Archivo temporal {pdf_file_path} eliminado.")
+                except OSError as unlink_error:
+                    logger.error(f"Error al eliminar el archivo temporal {pdf_file_path}: {unlink_error}")
     
     usuarios = UserAcueducto.objects.all().order_by('contrato')
     busqueda_contrato = request.GET.get('busqueda_contrato', '')
