@@ -22,6 +22,7 @@ class UserAcueducto(models.Model):
     credito_descripcion = models.TextField(blank=True)
     otros_gastos_valor = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     otros_gastos_descripcion = models.TextField(blank=True)
+    numero_de_medidor = models.CharField(max_length=50, blank=True, null=True, unique=True)
 
     def __str__(self):
         return f"{self.name} {self.lastname} - {self.contrato}"
