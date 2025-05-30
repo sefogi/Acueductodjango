@@ -256,10 +256,23 @@
             </div>
         </div>
         
-        {% if mensaje %}
-        <div class="mensaje {% if 'exitosamente' in mensaje %}exito{% else %}error{% endif %}">
-            {{ mensaje }}
-        </div>
+        {% if messages %}
+            <ul class="messages">
+                {% for message in messages %}
+                    <li{% if message.tags %} class="mensaje {{ message.tags }}"{% else %} class="mensaje"{% endif %}>
+                        {{ message }}
+                        {% if message.tags == 'info' %}
+                            <style>.mensaje.info { background-color: #e7f3fe; color: #31708f; border: 1px solid #bce8f1; }</style>
+                        {% elif message.tags == 'success' %}
+                            <style>.mensaje.success { background-color: #dff0d8; color: #3c763d; border: 1px solid #d6e9c6; }</style>
+                        {% elif message.tags == 'warning' %}
+                            <style>.mensaje.warning { background-color: #fcf8e3; color: #8a6d3b; border: 1px solid #faebcc; }</style>
+                        {% elif message.tags == 'error' %}
+                            <style>.mensaje.error { background-color: #f2dede; color: #a94442; border: 1px solid #ebccd1; }</style>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
         {% endif %}
 
         <form method="GET" action="{% url 'toma_lectura' %}" class="form-group">
