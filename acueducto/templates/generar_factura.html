@@ -56,6 +56,31 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="form-group">
+                    <label>Rango de Consecutivos:</label>
+                    <div class="consecutivo-range">
+                        <div class="consecutivo-inicio">
+                            <label for="consecutivo_desde_todas">Desde:</label>
+                            <input type="number" 
+                                   id="consecutivo_desde_todas" 
+                                   name="consecutivo_desde" 
+                                   required 
+                                   min="1"
+                                   class="form-control">
+                        </div>
+                        <div class="consecutivo-fin">
+                            <label for="consecutivo_hasta_todas">Hasta:</label>
+                            <input type="number" 
+                                   id="consecutivo_hasta_todas" 
+                                   name="consecutivo_hasta" 
+                                   required 
+                                   min="1"
+                                   class="form-control">
+                        </div>
+                    </div>
+                </div>
+
                 <button type="submit" name="generar_todas" class="submit-btn generate-all">
                     Generar Facturas de Todos los Usuarios
                 </button>
@@ -118,12 +143,7 @@
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label for="consecutivo_desde">Consecutivo Desde:</label>
-                    <input type="text" id="consecutivo_desde" name="consecutivo_desde" class="form-control">
-                    <label for="consecutivo_hasta">Consecutivo Hasta:</label>
-                    <input type="text" id="consecutivo_hasta" name="consecutivo_hasta" class="form-control">
-                </div>
+
 
                 <div class="form-actions">
                     <button type="submit" name="descargar" class="submit-btn">Descargar Factura</button>
@@ -178,24 +198,42 @@
                 });
             }
 
-            // Establecer fechas por defecto para el período de facturación
-            const today = new Date();
-            const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-            const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            // Función para establecer las fechas por defecto
+            function setDefaultDates() {
+                const today = new Date();
+                const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+                const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
-            // Formatear fechas para el input type="date"
-            const formatDate = (date) => {
-                const year = date.getFullYear();
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const day = String(date.getDate()).padStart(2, '0');
-                return `${year}-${month}-${day}`;
-            };
+                // Formatear fechas para el input type="date"
+                const formatDate = (date) => {
+                    return date.toISOString().split('T')[0];
+                };
 
-            // Establecer valores por defecto
-            document.getElementById('periodo_inicio_todas').value = formatDate(firstDayOfMonth);
-            document.getElementById('periodo_fin_todas').value = formatDate(lastDayOfMonth);
-            document.getElementById('periodo_inicio').value = formatDate(firstDayOfMonth);
-            document.getElementById('periodo_fin').value = formatDate(lastDayOfMonth);
+                // Establecer valores por defecto
+                const dateInputs = [
+                    'periodo_inicio_todas',
+                    'periodo_fin_todas',
+                    'periodo_inicio',
+                    'periodo_fin',
+                    'fecha_emision'
+                ];
+
+                dateInputs.forEach(inputId => {
+                    const input = document.getElementById(inputId);
+                    if (input) {
+                        if (inputId.includes('inicio')) {
+                            input.value = formatDate(firstDayOfMonth);
+                        } else if (inputId.includes('fin')) {
+                            input.value = formatDate(lastDayOfMonth);
+                        } else {
+                            input.value = formatDate(today);
+                        }
+                    }
+                });
+            }
+
+            // Llamar a la función cuando se carga el documento
+            setDefaultDates();
         });
     </script>
 </body>

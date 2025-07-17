@@ -17,9 +17,33 @@ def obtener_mes_espanol(numero_mes):
 
 def formatear_fecha_espanol(fecha):
     """
-    Formatea una fecha en español
-    fecha: objeto datetime
-    retorna: string con formato "dd de mes de yyyy"
+    Formatea una fecha en español.
+
+    Args:
+        fecha: Objeto date, datetime o str en formato YYYY-MM-DD.
+
+    Returns:
+        str: Fecha formateada en español (ejemplo: "15 de julio de 2025")
+
+    Raises:
+        ValueError: Si el objeto fecha no es válido o no se puede convertir
     """
-    mes = obtener_mes_espanol(fecha.month)
-    return f"{fecha.day} de {mes} de {fecha.year}"
+    from datetime import datetime, date
+    
+    try:
+        # Si es string, convertir a date
+        if isinstance(fecha, str):
+            fecha = datetime.strptime(fecha, '%Y-%m-%d').date()
+        # Si es datetime, convertir a date
+        elif isinstance(fecha, datetime):
+            fecha = fecha.date()
+        # Si no es date, intentar convertir
+        elif not isinstance(fecha, date):
+            raise ValueError(f"Tipo de fecha no soportado: {type(fecha)}")
+
+        dia = fecha.day
+        mes = obtener_mes_espanol(fecha.month)
+        anio = fecha.year
+        return f"{dia} de {mes} de {anio}"
+    except Exception as e:
+        raise ValueError(f"Error al formatear fecha: {str(e)}. Valor recibido: {fecha}, Tipo: {type(fecha)}")

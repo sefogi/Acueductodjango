@@ -6,7 +6,7 @@
 <head>
     {% comment %}Asegurando que los archivos estáticos se cargan correctamente{% endcomment %}
     <meta charset="UTF-8">
-    <title>Factura - {{ usuario.contrato }}</title>
+    <title>Factura #{{ factura.consecutivo }} - {{ usuario.contrato }}</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -16,6 +16,12 @@
         .factura {
             max-width: 800px;
             margin: 0 auto;
+        }
+        .consecutivo {
+            font-size: 1.2em;
+            color: #333;
+            font-weight: bold;
+            margin-bottom: 10px;
         }
         .header-table {
             width: 100%;
@@ -155,7 +161,7 @@
             <tbody>
                 <tr>
                     <td class="logo-cell">
-                        <img src="images/logo1.webp" alt="Logo Acueducto" class="logo">
+                        <img src="{% static 'images/logo1.webp' %}" alt="Logo Acueducto" class="logo">
                     </td>
                     <td class="info-cell">
                         <div class="empresa-info">
@@ -164,10 +170,7 @@
                             <p class="factura-numero">Numero de medidor: {{ usuario.numero_de_medidor }}</p>
                             <p>Fecha de Emisión: {{ fecha_emision|fecha_espanol }}</p>
                             <p class="periodo-facturacion"><strong>Período de Facturación:</strong><br>{{ periodo_facturacion }}</p>
-                            {% if consecutivo_desde and consecutivo_hasta %}
-                                <p>Consecutivo Desde: {{ consecutivo_desde }}</p>
-                                <p>Consecutivo Hasta: {{ consecutivo_hasta }}</p>
-                            {% endif %}
+                            <p><strong>Número de Factura:</strong> {{ factura.consecutivo }}</p>
                         </div>
                     </td>
                     <td class="contrato-cell">

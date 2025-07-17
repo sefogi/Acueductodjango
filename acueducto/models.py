@@ -70,6 +70,43 @@ class OrdenRuta(models.Model):
     def __str__(self):
         return f"{self.ruta} - {self.usuario.contrato} (Orden: {self.orden})"
 
+class Factura(models.Model):
+    usuario = models.ForeignKey(UserAcueducto, on_delete=models.CASCADE, related_name='facturas')
+    consecutivo = models.IntegerField(unique=True)
+    fecha_emision = models.DateField()
+    periodo_inicio = models.DateField()
+    periodo_fin = models.DateField()
+    consumo = models.FloatField()
+    valor_total = models.DecimalField(max_digits=10, decimal_places=2)
+    pdf_generado = models.BooleanField(default=False)
+    email_enviado = models.BooleanField(default=False)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-fecha_emision', '-consecutivo']
+
+    def __str__(self):
+        return f"Factura #{self.consecutivo} - {self.usuario.contrato}"
+
+    @classmethod
+    def get_next_consecutivo(cls, consecutivo_inicio=None):
+        """
+        Obtiene el siguiente número de consecutivo.
+        Si se proporciona consecutivo_inicio, lo usa como base,
+        de lo contrario genera el siguiente número automáticamente.
+        """
+        from django.db import transaction
+        
+        with transaction.atomic():
+            if consecutivo_inicio is not None:
+                return consecutivo_inicio
+            
+            # Select for update para bloquear la fila y evitar condiciones de carrera
+            ultima_factura = cls.objects.select_for_update().order_by('-consecutivo').first()
+            if ultima_factura:
+                return ultima_factura.consecutivo + 1
+            return 1
+
 
 
 
