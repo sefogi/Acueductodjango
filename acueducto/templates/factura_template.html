@@ -98,6 +98,22 @@
         .lectura-info {
             margin-bottom: 5px;
         }
+        .cuotas-info {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f8f8;
+            border-radius: 5px;
+        }
+        .cuotas-detalle {
+            margin: 10px 0;
+            padding: 10px;
+            border-left: 3px solid #4CAF50;
+            background-color: #fff;
+        }
+        .cuota-actual {
+            font-weight: bold;
+            color: #2196F3;
+        }
         .consumo-destacado {
             color: #4CAF50;
             font-weight: bold;
@@ -230,18 +246,26 @@
 
 
                 </tr>
-                {% if usuario.credito %}
+                {% if cuota_credito > 0 %}
                 <tr class="extras-row">
-                    <td>Crédito</td>
-                    <td colspan="2">{{ usuario.credito_descripcion|default:"Saldo pendiente" }}</td>
-                    <td>{{ usuario.credito|format_cop:2 }}</td>
+                    <td>Cuota de Crédito</td>
+                    <td colspan="2">
+                        {{ usuario.credito_descripcion|default:"Cuota actual del crédito" }}
+                        <br>
+                        <small>Cuota {{ usuario.credito_total_cuotas|sub:credito_cuotas_restantes }} de {{ usuario.credito_total_cuotas }}</small>
+                    </td>
+                    <td>{{ cuota_credito|format_cop:0 }}</td>
                 </tr>
                 {% endif %}
-                {% if usuario.otros_gastos_valor %}
+                {% if cuota_otros_gastos > 0 %}
                 <tr class="extras-row">
-                    <td>Otros Gastos</td>
-                    <td colspan="2">{{ usuario.otros_gastos_descripcion }}</td>
-                    <td>{{ usuario.otros_gastos_valor|format_cop:2 }}</td>
+                    <td>Cuota de Otros Gastos</td>
+                    <td colspan="2">
+                        {{ usuario.otros_gastos_descripcion }}
+                        <br>
+                        <small>Cuota {{ usuario.otros_gastos_total_cuotas|sub:otros_gastos_cuotas_restantes }} de {{ usuario.otros_gastos_total_cuotas }}</small>
+                    </td>
+                    <td>{{ cuota_otros_gastos|format_cop:0 }}</td>
                 </tr>
                 {% endif %}
             </tbody>
@@ -250,6 +274,32 @@
         <div class="total">
             Total a Pagar: {{ total_factura_redondeado|format_cop:0 }}
         </div>
+
+        {% if credito_cuotas_restantes > 0 or otros_gastos_cuotas_restantes > 0 %}
+        <div class="cuotas-info">
+            <h3>Información de Cuotas Pendientes</h3>
+            
+            {% if credito_cuotas_restantes > 0 %}
+            <div class="cuotas-detalle">
+                <p><strong>Crédito:</strong></p>
+                <p>Cuota actual: <span class="cuota-actual">{{ cuota_credito|format_cop:0 }}</span></p>
+                <p>Cuotas restantes: {{ credito_cuotas_restantes }}</p>
+                <p>Saldo pendiente: {{ credito_valor_restante|format_cop:0 }}</p>
+                <p>Tasa de interés: {{ usuario.credito_interes }}% anual</p>
+            </div>
+            {% endif %}
+            
+            {% if otros_gastos_cuotas_restantes > 0 %}
+            <div class="cuotas-detalle">
+                <p><strong>Otros Gastos:</strong></p>
+                <p>Cuota actual: <span class="cuota-actual">{{ cuota_otros_gastos|format_cop:0 }}</span></p>
+                <p>Cuotas restantes: {{ otros_gastos_cuotas_restantes }}</p>
+                <p>Saldo pendiente: {{ otros_gastos_valor_restante|format_cop:0 }}</p>
+                <p>Tasa de interés: {{ usuario.otros_gastos_interes }}% anual</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
 
         <div class="grafico-container">
             <h2>Estadística de Consumo</h2>

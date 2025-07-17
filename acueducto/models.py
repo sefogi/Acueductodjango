@@ -1,4 +1,5 @@
 from django.db import models
+from decimal import Decimal
 
 # Create your models here.
 
@@ -19,13 +20,137 @@ class UserAcueducto(models.Model):
     lectura = models.FloatField(blank=True, null=True)
     categoria = models.CharField(max_length=20, choices=CATEGORIA_CHOICES, default='residencial')
     zona = models.CharField(max_length=100, blank=True)
+    # Campos para crédito
     credito = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     credito_descripcion = models.TextField(blank=True)
+    credito_total_cuotas = models.IntegerField(default=1)
+    credito_cuotas_restantes = models.IntegerField(default=0)
+    credito_valor_cuota = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    credito_interes = models.DecimalField(max_digits=5, decimal_places=2, default=0)  # Porcentaje de interés
+    credito_valor_restante = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    
+    # Campos para otros gastos
     otros_gastos_valor = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     otros_gastos_descripcion = models.TextField(blank=True)
+    otros_gastos_total_cuotas = models.IntegerField(default=1)
+    otros_gastos_cuotas_restantes = models.IntegerField(default=0)
+    otros_gastos_valor_cuota = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    otros_gastos_interes = models.DecimalField(max_digits=5, decimal_places=2, default=0)  # Porcentaje de interés
+    otros_gastos_valor_restante = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     def __str__(self):
         return f"{self.name} {self.lastname} - {self.contrato}"
+
+    def calcular_credito(self):
+        """
+        Calcula los valores del crédito basado en el monto total, número de cuotas e interés.
+        Utiliza la fórmula de amortización con interés compuesto:
+        PMT = P * (r * (1 + r)^n) / ((1 + r)^n - 1)
+        Donde:
+        PMT = Pago mensual
+        P = Principal (monto del crédito)
+        r = Tasa de interés mensual
+        n = Número de cuotas
+        """
+        if self.credito > 0 and self.credito_total_cuotas > 0:
+            # Convertir valores a Decimal para mayor precisión
+            principal = Decimal(str(self.credito))
+            n_cuotas = Decimal(str(self.credito_total_cuotas))
+            tasa_anual = Decimal(str(self.credito_interes))
+            
+            # Calculamos la tasa mensual (dividir por 100 para convertir porcentaje)
+            tasa_mensual = tasa_anual / Decimal('100') / Decimal('12')
+            
+            if tasa_mensual > 0:
+                # Fórmula de cuota con interés compuesto
+                factor = (1 + tasa_mensual) ** n_cuotas
+                cuota = principal * (tasa_mensual * factor) / (factor - 1)
+            else:
+                # Sin interés, división simple
+                cuota = principal / n_cuotas
+                
+            self.credito_valor_cuota = round(cuota, 2)
+            self.credito_cuotas_restantes = int(n_cuotas)
+            self.credito_valor_restante = principal
+
+    def calcular_otros_gastos(self):
+        """
+        Calcula los valores de otros gastos basado en el monto total, número de cuotas e interés.
+        Utiliza la misma fórmula de amortización que el crédito.
+        """
+        if self.otros_gastos_valor > 0 and self.otros_gastos_total_cuotas > 0:
+            # Convertir valores a Decimal para mayor precisión
+            principal = Decimal(str(self.otros_gastos_valor))
+            n_cuotas = Decimal(str(self.otros_gastos_total_cuotas))
+            tasa_anual = Decimal(str(self.otros_gastos_interes))
+            
+            # Calculamos la tasa mensual (dividir por 100 para convertir porcentaje)
+            tasa_mensual = tasa_anual / Decimal('100') / Decimal('12')
+            
+            if tasa_mensual > 0:
+                # Fórmula de cuota con interés compuesto
+                factor = (1 + tasa_mensual) ** n_cuotas
+                cuota = principal * (tasa_mensual * factor) / (factor - 1)
+            else:
+                # Sin interés, división simple
+                cuota = principal / n_cuotas
+                
+            self.otros_gastos_valor_cuota = round(cuota, 2)
+            self.otros_gastos_cuotas_restantes = int(n_cuotas)
+            self.otros_gastos_valor_restante = principal
+
+    def actualizar_credito_factura(self):
+        """
+        Actualiza los valores del crédito después de generar una factura.
+        Retorna el valor de la cuota actual.
+        """
+        if self.credito_cuotas_restantes > 0:
+            cuota_actual = self.credito_valor_cuota
+            self.credito_cuotas_restantes -= 1
+            self.credito_valor_restante = max(0, self.credito_valor_restante - self.credito_valor_cuota)
+            self.save()
+            return cuota_actual
+        return 0
+
+    def actualizar_otros_gastos_factura(self):
+        """
+        Actualiza los valores de otros gastos después de generar una factura.
+        Retorna el valor de la cuota actual.
+        """
+        if self.otros_gastos_cuotas_restantes > 0:
+            cuota_actual = self.otros_gastos_valor_cuota
+            self.otros_gastos_cuotas_restantes -= 1
+            self.otros_gastos_valor_restante = max(0, self.otros_gastos_valor_restante - self.otros_gastos_valor_cuota)
+            self.save()
+            return cuota_actual
+        return 0
+
+    def save(self, *args, **kwargs):
+        is_new = not self.pk or self._state.adding
+        
+        # Detectar cambios en los valores relevantes
+        if is_new:
+            old_credito = Decimal('0')
+            old_otros_gastos = Decimal('0')
+        else:
+            old_instance = UserAcueducto.objects.get(pk=self.pk)
+            old_credito = old_instance.credito
+            old_otros_gastos = old_instance.otros_gastos_valor
+            
+        # Guardar primero para tener el ID si es nuevo
+        super().save(*args, **kwargs)
+        
+        # Recalcular si es nuevo o si los valores cambiaron
+        if is_new or self.credito != old_credito:
+            self.calcular_credito()
+        if is_new or self.otros_gastos_valor != old_otros_gastos:
+            self.calcular_otros_gastos()
+            
+        if self.credito_valor_cuota or self.otros_gastos_valor_cuota:
+            super().save(update_fields=[
+                'credito_valor_cuota', 'credito_cuotas_restantes', 'credito_valor_restante',
+                'otros_gastos_valor_cuota', 'otros_gastos_cuotas_restantes', 'otros_gastos_valor_restante'
+            ])
 
 class HistoricoLectura(models.Model):
     usuario = models.ForeignKey(UserAcueducto, on_delete=models.CASCADE, related_name='lecturas')

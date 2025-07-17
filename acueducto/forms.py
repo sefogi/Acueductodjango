@@ -15,10 +15,14 @@ class UserAcueductoForm(forms.ModelForm):
             'categoria', 
             'zona', 
             'fecha_ultima_lectura', # Renamed from 'date'
-            'credito', 
-            'credito_descripcion', 
-            'otros_gastos_valor', 
+            'credito',
+            'credito_descripcion',
+            'credito_total_cuotas',
+            'credito_interes',
+            'otros_gastos_valor',
             'otros_gastos_descripcion',
+            'otros_gastos_total_cuotas',
+            'otros_gastos_interes',
             'lectura', # Added lectura field
         ]
         labels = {
@@ -32,10 +36,14 @@ class UserAcueductoForm(forms.ModelForm):
             'categoria': 'Categoría',
             'zona': 'Zona',
             'fecha_ultima_lectura': 'Fecha de Última Lectura',
-            'credito': 'Crédito Asignado',
+            'credito': 'Valor Total del Crédito',
             'credito_descripcion': 'Descripción del Crédito',
-            'otros_gastos_valor': 'Valor de Otros Gastos',
+            'credito_total_cuotas': 'Número de Cuotas del Crédito',
+            'credito_interes': 'Interés del Crédito (%)',
+            'otros_gastos_valor': 'Valor Total de Otros Gastos',
             'otros_gastos_descripcion': 'Descripción de Otros Gastos',
+            'otros_gastos_total_cuotas': 'Número de Cuotas de Otros Gastos',
+            'otros_gastos_interes': 'Interés de Otros Gastos (%)',
             'lectura': 'Lectura Actual', # Added lectura label
         }
         widgets = {

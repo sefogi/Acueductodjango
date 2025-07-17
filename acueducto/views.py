@@ -10,6 +10,7 @@ from django.core.mail import EmailMessage
 from django.conf import settings
 from weasyprint import HTML
 from datetime import datetime, timedelta, date
+from decimal import Decimal
 from django.utils import timezone # Import timezone
 from django.db import IntegrityError, DatabaseError # Import IntegrityError and DatabaseError
 import tempfile
@@ -163,7 +164,7 @@ def generar_pdf_factura(usuario, fecha_emision, periodo_facturacion, base_url, c
 def enviar_factura_email(usuario, pdf_file):
     """Envía la factura por email al usuario"""
     email = EmailMessage(
-        'Factura del Acueducto',
+        'Factura del Acueducto La Marina',
         'Adjunto encontrará su factura.',
         settings.DEFAULT_FROM_EMAIL,
         [usuario.email]
@@ -288,32 +289,44 @@ def generar_factura_individual(contrato, fecha_emision, periodo_inicio, periodo_
         primera_lectura = lecturas.first().lectura
         consumo = ultima_lectura - primera_lectura
 
-        # Calcular valor total (implementa tu lógica de cálculo aquí)
-        valor_por_m3 = 1000  # Ajusta según tu lógica de negocio
-        valor_total = consumo * valor_por_m3
+        from decimal import Decimal
 
+        # Calcular valor base por consumo
+        valor_por_m3 = Decimal('1000')  # Ajusta según tu lógica de negocio
+        valor_consumo = Decimal(str(consumo)) * valor_por_m3
+        costo_consumo_agua_redondeado = round(valor_consumo, 2)
+        
         # Verificar si ya existe una factura para este período
-        factura_existente = Factura.objects.filter(
+        factura = Factura.objects.filter(
             usuario=usuario,
             periodo_inicio=periodo_inicio,
             periodo_fin=periodo_fin
-        ).first()
+        ).order_by('-fecha_creacion').first()
+        
+        # Calcular cuotas y actualizarlas si es una nueva factura
+        if not factura:
+            cuota_credito = Decimal(str(usuario.actualizar_credito_factura()))
+            cuota_otros_gastos = Decimal(str(usuario.actualizar_otros_gastos_factura()))
+        else:
+            cuota_credito = Decimal(str(usuario.credito_valor_cuota))
+            cuota_otros_gastos = Decimal(str(usuario.otros_gastos_valor_cuota))
+        
+        # Calcular valor total incluyendo cuotas
+        valor_total = valor_consumo + cuota_credito + cuota_otros_gastos
+        total_factura_redondeado = round(valor_total, 2)
 
-        if factura_existente:
-            raise ValueError("Ya existe una factura para este período")
-
-        # Crear la factura en la base de datos
-        factura = Factura.objects.create(
-            usuario=usuario,
-            consecutivo=Factura.get_next_consecutivo(),
-            fecha_emision=fecha_emision,
-            periodo_inicio=periodo_inicio,
-            periodo_fin=periodo_fin,
-            consumo=consumo,
-            valor_total=valor_total,
-            pdf_generado=True
-        )
-
+        if not factura:
+            # Si no existe, crear una nueva factura
+            factura = Factura.objects.create(
+                usuario=usuario,
+                consecutivo=Factura.get_next_consecutivo(),
+                fecha_emision=fecha_emision,
+                periodo_inicio=periodo_inicio,
+                periodo_fin=periodo_fin,
+                consumo=consumo,
+                valor_total=valor_total
+            )
+        
         # Obtener el histórico de lecturas para mostrar en la factura
         historico_lecturas = HistoricoLectura.objects.filter(
             usuario=usuario
@@ -329,6 +342,8 @@ def generar_factura_individual(contrato, fecha_emision, periodo_inicio, periodo_
 
         # Generar el PDF
         template = get_template('factura_template.html')
+        
+        # Preparar el contexto para la plantilla
         context = {
             'factura': factura,
             'usuario': usuario,
@@ -336,12 +351,25 @@ def generar_factura_individual(contrato, fecha_emision, periodo_inicio, periodo_
             'historico_lecturas': historico_lecturas,
             'lectura_anterior': lectura_anterior,
             'consumo': consumo,
-            'valor_total': valor_total,
-            'fecha_emision': fecha_emision,
-            'periodo_facturacion': f"Del {periodo_inicio.strftime('%d/%m/%Y')} al {periodo_fin.strftime('%d/%m/%Y')}",
+            'valor_consumo': valor_consumo,
             'valor_por_m3': valor_por_m3,
-            'costo_consumo_agua_redondeado': round(valor_total),
-            'total_factura_redondeado': round(valor_total + float(usuario.credito) + float(usuario.otros_gastos_valor))
+            'costo_consumo_agua_redondeado': costo_consumo_agua_redondeado,
+            # Información de créditos
+            'cuota_credito': cuota_credito,
+            'credito_cuotas_restantes': usuario.credito_cuotas_restantes,
+            'credito_valor_restante': usuario.credito_valor_restante,
+            'credito_interes': usuario.credito_interes,
+            # Información de otros gastos
+            'cuota_otros_gastos': cuota_otros_gastos,
+            'otros_gastos_cuotas_restantes': usuario.otros_gastos_cuotas_restantes,
+            'otros_gastos_valor_restante': usuario.otros_gastos_valor_restante,
+            'otros_gastos_interes': usuario.otros_gastos_interes,
+            # Totales
+            'valor_total': valor_total,
+            'total_factura_redondeado': total_factura_redondeado,
+            # Información general
+            'fecha_emision': fecha_emision,
+            'periodo_facturacion': f"Del {periodo_inicio.strftime('%d/%m/%Y')} al {periodo_fin.strftime('%d/%m/%Y')}"
         }
         
         html_string = template.render(context)
@@ -585,12 +613,12 @@ def generar_factura(request):
                 # Si se solicitó enviar por email
                 if 'enviar_email' in request.POST:
                     usuario = UserAcueducto.objects.get(contrato=contrato)
-                    factura = Factura.objects.get(
+                    factura = Factura.objects.filter(
                         usuario=usuario,
                         fecha_emision=fecha_emision,
                         periodo_inicio=periodo_inicio,
                         periodo_fin=periodo_fin
-                    )
+                    ).order_by('-fecha_creacion').first()
                     
                     email = EmailMessage(
                         f'Factura #{factura.consecutivo}',

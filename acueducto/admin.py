@@ -2,8 +2,7 @@ from django.contrib import admin
 from django import forms
 from .models import UserAcueducto, HistoricoLectura
 
-# This local form might be redundant if the main UserAcueductoForm from forms.py is sufficient.
-# For now, let's update it as per the field rename.
+
 class UserAcueductoAdminForm(forms.ModelForm): # Renamed for clarity, or could be removed
     fecha_ultima_lectura = forms.DateField(
         widget=forms.DateInput(attrs={'type': 'date'}),
