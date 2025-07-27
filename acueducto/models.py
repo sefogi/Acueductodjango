@@ -41,6 +41,17 @@ class UserAcueducto(models.Model):
     def __str__(self):
         return f"{self.name} {self.lastname} - {self.contrato}"
 
+    def get_ultima_lectura(self):
+        """
+        Obtiene la última lectura del usuario incluyendo la fecha.
+        Returns:
+            tuple: (fecha_lectura, lectura) o (None, None) si no hay lecturas
+        """
+        ultima_lectura = self.lecturas.order_by('-fecha_lectura').first()
+        if ultima_lectura:
+            return ultima_lectura.fecha_lectura, ultima_lectura.lectura
+        return None, None
+
     def calcular_credito(self):
         """
         Calcula los valores del crédito basado en el monto total, número de cuotas e interés.
@@ -72,6 +83,9 @@ class UserAcueducto(models.Model):
             self.credito_valor_cuota = round(cuota, 2)
             self.credito_cuotas_restantes = int(n_cuotas)
             self.credito_valor_restante = principal
+            
+            # Guardar los cambios
+            self.save(update_fields=['credito_valor_cuota', 'credito_cuotas_restantes', 'credito_valor_restante'])
 
     def calcular_otros_gastos(self):
         """
@@ -94,10 +108,43 @@ class UserAcueducto(models.Model):
             else:
                 # Sin interés, división simple
                 cuota = principal / n_cuotas
-                
+            
             self.otros_gastos_valor_cuota = round(cuota, 2)
             self.otros_gastos_cuotas_restantes = int(n_cuotas)
             self.otros_gastos_valor_restante = principal
+            
+            # Guardar los cambios
+            self.save(update_fields=['otros_gastos_valor_cuota', 'otros_gastos_cuotas_restantes', 'otros_gastos_valor_restante'])
+            
+    def actualizar_credito_factura(self):
+        """
+        Actualiza el estado del crédito después de generar una factura y retorna el valor de la cuota.
+        """
+        if self.credito_cuotas_restantes > 0:
+            cuota = self.credito_valor_cuota
+            self.credito_cuotas_restantes -= 1
+            self.credito_valor_restante -= cuota
+            if self.credito_cuotas_restantes == 0:
+                self.credito = Decimal('0')
+            self.save(update_fields=['credito_cuotas_restantes', 'credito_valor_restante', 'credito'])
+            return cuota
+        return Decimal('0')
+        
+    def actualizar_otros_gastos_factura(self):
+        """
+        Actualiza el estado de otros gastos después de generar una factura y retorna el valor de la cuota.
+        """
+        if self.otros_gastos_cuotas_restantes > 0:
+            cuota = self.otros_gastos_valor_cuota
+            self.otros_gastos_cuotas_restantes -= 1
+            self.otros_gastos_valor_restante -= cuota
+            if self.otros_gastos_cuotas_restantes == 0:
+                self.otros_gastos_valor = Decimal('0')
+            self.save(update_fields=['otros_gastos_cuotas_restantes', 'otros_gastos_valor_restante', 'otros_gastos_valor'])
+            return cuota
+        return Decimal('0')
+            
+
 
     def actualizar_credito_factura(self):
         """
@@ -201,7 +248,7 @@ class Factura(models.Model):
     fecha_emision = models.DateField()
     periodo_inicio = models.DateField()
     periodo_fin = models.DateField()
-    consumo = models.FloatField()
+    consumo = models.DecimalField(max_digits=10, decimal_places=2)
     valor_total = models.DecimalField(max_digits=10, decimal_places=2)
     pdf_generado = models.BooleanField(default=False)
     email_enviado = models.BooleanField(default=False)
@@ -212,6 +259,27 @@ class Factura(models.Model):
 
     def __str__(self):
         return f"Factura #{self.consecutivo} - {self.usuario.contrato}"
+
+    @classmethod
+    def existe_factura_en_periodo(cls, usuario, periodo_inicio, periodo_fin):
+        """
+        Verifica si ya existe una factura para el usuario en el período especificado.
+        """
+        return cls.objects.filter(
+            usuario=usuario,
+            periodo_inicio__lte=periodo_fin,
+            periodo_fin__gte=periodo_inicio
+        ).exists()
+
+    @classmethod
+    def tiene_lecturas_en_periodo(cls, usuario, periodo_inicio, periodo_fin):
+        """
+        Verifica si el usuario tiene lecturas en el período especificado.
+        """
+        return HistoricoLectura.objects.filter(
+            usuario=usuario,
+            fecha_lectura__range=(periodo_inicio, periodo_fin)
+        ).exists()
 
     @classmethod
     def get_next_consecutivo(cls, consecutivo_inicio=None):

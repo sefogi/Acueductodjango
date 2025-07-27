@@ -1,0 +1,53 @@
+.no-lectura {
+    color: #999;
+    font-style: italic;
+}
+
+.users-table td {
+    position: relative;
+}
+
+.users-table td[data-ultima-lectura]:hover::after {
+    content: attr(data-ultima-lectura);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #333;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1;
+}
+
+/* Estilo para las fechas de lectura */
+.fecha-lectura {
+    display: flex;
+    flex-direction: column;
+}
+
+.fecha-lectura .fecha {
+    font-weight: bold;
+}
+
+.fecha-lectura .hora {
+    font-size: 0.8em;
+    color: #666;
+}
+
+/* Estilo para el valor de la lectura */
+.lectura-valor {
+    font-weight: bold;
+    color: #0066cc;
+}
+
+/* Estilo para indicar alertas */
+.lectura-antigua {
+    color: #ff6b6b;
+}
+
+.lectura-reciente {
+    color: #51cf66;
+}

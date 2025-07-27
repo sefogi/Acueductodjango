@@ -6,6 +6,7 @@
     <meta charset="UTF-8">
     <title>Lista de Usuarios</title>
     <link rel="stylesheet" href="{% static 'styles.css' %}">
+    <link rel="stylesheet" href="{% static 'css/lecturas.css' %}">
 </head>
 <body>
     <div class="container">
@@ -81,7 +82,16 @@
                 {% for usuario in usuarios %}
                 <tr>
                     <td>{{ usuario.contrato }}</td>
-                    <td>{{ usuario.fecha_ultima_lectura|date:"d/m/Y" }}</td>
+                    <td>
+                        {% if usuario.fecha_ultima_lectura %}
+                        <div class="fecha-lectura {% if usuario.fecha_ultima_lectura|date:'Y-m-d' < now|date:'Y-m-d' %}lectura-antigua{% else %}lectura-reciente{% endif %}">
+                            <span class="fecha">{{ usuario.fecha_ultima_lectura|date:"d/m/Y" }}</span>
+                            <span class="hora">{{ usuario.fecha_ultima_lectura|time:"H:i" }}</span>
+                        </div>
+                        {% else %}
+                        <span class="no-lectura">Sin lecturas</span>
+                        {% endif %}
+                    </td>
                     <td>{{ usuario.name }}</td>
                     <td>{{ usuario.lastname }}</td>
                     <td>{{ usuario.email }}</td>
@@ -89,7 +99,12 @@
                     <td>{{ usuario.address }}</td>
                     <td>{{ usuario.get_categoria_display }}</td>
                     <td>{{ usuario.zona }}</td>
-                    <td>{{ usuario.lectura }}</td>
+                    <td>{% if usuario.lectura %}
+                        {{ usuario.lectura|floatformat:1 }} m³
+                        {% else %}
+                        <span class="no-lectura">Sin lecturas</span>
+                        {% endif %}
+                    </td>
                     <td class="actions">
                         <a href="{% url 'historico_lecturas' usuario.contrato %}" class="btn-historico">Ver Histórico</a>
                     </td>

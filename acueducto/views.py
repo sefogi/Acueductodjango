@@ -54,7 +54,16 @@ def index(request):
 
 def lista_usuarios(request):
     busqueda = request.GET.get('busqueda', '')
-    usuarios = UserAcueducto.objects.all()
+    
+    # Obtener usuarios con sus últimas lecturas
+    usuarios = UserAcueducto.objects.all().prefetch_related('lecturas')
+    
+    # Actualizar las fechas de última lectura
+    for usuario in usuarios:
+        ultima_fecha, ultima_lectura = usuario.get_ultima_lectura()
+        if ultima_fecha:
+            usuario.fecha_ultima_lectura = ultima_fecha
+            usuario.lectura = ultima_lectura
     
     # Obtener solo las rutas activas
     rutas_activas = Ruta.objects.filter(activa=True).prefetch_related('ordenruta_set__usuario')
@@ -101,7 +110,8 @@ def lista_usuarios(request):
     return render(request, 'lista_usuarios.html', {
         'usuarios': usuarios,
         'busqueda': busqueda,
-        'rutas_activas': rutas_activas
+        'rutas_activas': rutas_activas,
+        'now': timezone.now()
     })
 
 def generar_pdf_factura(usuario, fecha_emision, periodo_facturacion, base_url, consecutivo_desde=None, consecutivo_hasta=None):
@@ -245,9 +255,22 @@ def generar_todas_facturas(periodo_inicio, periodo_fin):
     zip_buffer.seek(0)
     return zip_buffer
 
-def generar_factura_individual(contrato, fecha_emision, periodo_inicio, periodo_fin):
+def generar_factura_individual(contrato, fecha_emision, periodo_inicio, periodo_fin, force=False):
     """
     Genera una factura individual para un usuario.
+    
+    Args:
+        contrato (str): Número de contrato del usuario
+        fecha_emision (date): Fecha de emisión de la factura
+        periodo_inicio (date): Fecha de inicio del período de facturación
+        periodo_fin (date): Fecha de fin del período de facturación
+        force (bool): Si es True, genera la factura incluso si ya existe una para el período
+    
+    Returns:
+        BytesIO: Buffer conteniendo el PDF de la factura
+    
+    Raises:
+        ValueError: Si hay errores en las fechas, usuario no existe, o no hay lecturas
     """
     try:
         # Validar que las fechas son objetos date
@@ -274,19 +297,32 @@ def generar_factura_individual(contrato, fecha_emision, periodo_inicio, periodo_
             raise ValueError("La fecha final debe ser posterior a la fecha inicial")
 
         usuario = UserAcueducto.objects.get(contrato=contrato)
+        
+        # Verificar si ya existe una factura para este período
+        if not force and Factura.existe_factura_en_periodo(usuario, periodo_inicio, periodo_fin):
+            raise ValueError(f"Ya existe una factura para el usuario {contrato} en este período")
+            
+        # Verificar si hay lecturas para el período
+        if not Factura.tiene_lecturas_en_periodo(usuario, periodo_inicio, periodo_fin):
+            raise ValueError(f"No hay lecturas para el usuario {contrato} en el período especificado")
 
         # Obtener las lecturas del período
         lecturas = HistoricoLectura.objects.filter(
             usuario=usuario,
             fecha_lectura__range=[periodo_inicio, periodo_fin]
-        ).order_by('fecha_lectura')
+        ).order_by('-fecha_lectura')  # Orden descendente para que la última esté primero
         
         if not lecturas.exists():
             raise ValueError("No hay lecturas para el período especificado")
 
-        # Calcular consumo
-        ultima_lectura = lecturas.last().lectura
-        primera_lectura = lecturas.first().lectura
+        # Las lecturas están ordenadas en orden descendente
+        # Validar que haya al menos dos lecturas
+        if lecturas.count() < 2:
+            raise ValueError("No hay suficientes lecturas para calcular el consumo")
+        
+        # Como están en orden descendente, first() es la más reciente
+        ultima_lectura = lecturas.first().lectura  # La más reciente
+        primera_lectura = lecturas.last().lectura  # La más antigua
         consumo = ultima_lectura - primera_lectura
 
         from decimal import Decimal
@@ -294,7 +330,7 @@ def generar_factura_individual(contrato, fecha_emision, periodo_inicio, periodo_
         # Calcular valor base por consumo
         valor_por_m3 = Decimal('1000')  # Ajusta según tu lógica de negocio
         valor_consumo = Decimal(str(consumo)) * valor_por_m3
-        costo_consumo_agua_redondeado = round(valor_consumo, 2)
+        valor_consumo_redondeado = round(valor_consumo, 2)
         
         # Verificar si ya existe una factura para este período
         factura = Factura.objects.filter(
@@ -312,7 +348,7 @@ def generar_factura_individual(contrato, fecha_emision, periodo_inicio, periodo_
             cuota_otros_gastos = Decimal(str(usuario.otros_gastos_valor_cuota))
         
         # Calcular valor total incluyendo cuotas
-        valor_total = valor_consumo + cuota_credito + cuota_otros_gastos
+        valor_total = valor_consumo_redondeado + cuota_credito + cuota_otros_gastos
         total_factura_redondeado = round(valor_total, 2)
 
         if not factura:
@@ -323,7 +359,7 @@ def generar_factura_individual(contrato, fecha_emision, periodo_inicio, periodo_
                 fecha_emision=fecha_emision,
                 periodo_inicio=periodo_inicio,
                 periodo_fin=periodo_fin,
-                consumo=consumo,
+                consumo=Decimal(str(consumo)),
                 valor_total=valor_total
             )
         
@@ -353,7 +389,7 @@ def generar_factura_individual(contrato, fecha_emision, periodo_inicio, periodo_
             'consumo': consumo,
             'valor_consumo': valor_consumo,
             'valor_por_m3': valor_por_m3,
-            'costo_consumo_agua_redondeado': costo_consumo_agua_redondeado,
+            'valor_consumo_redondeado': valor_consumo_redondeado,
             # Información de créditos
             'cuota_credito': cuota_credito,
             'credito_cuotas_restantes': usuario.credito_cuotas_restantes,
@@ -405,7 +441,12 @@ def generar_factura_individual(contrato, fecha_emision, periodo_inicio, periodo_
         raise
 
 def generar_factura(request):
+    """
+    Vista para generar facturas individuales o masivas.
+    """
     if request.method == 'POST':
+        from django.db import transaction
+        
         try:
             # Convertir fechas asegurándose de que son objetos date
             def parse_date(date_str):
@@ -486,63 +527,102 @@ def generar_factura(request):
                     
                     zip_buffer = BytesIO()
                     facturas_generadas = []
+                    facturas_existentes = 0
+                    usuarios_sin_lecturas = 0
                     consecutivo_actual = consecutivo_desde
                     
                     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
                         for usuario in usuarios:
                             try:
                                 # Verificar si ya existe una factura para este usuario y período
-                                factura_existente = Factura.objects.filter(
-                                    usuario=usuario,
-                                    periodo_inicio=periodo_inicio,
-                                    periodo_fin=periodo_fin
-                                ).first()
-                                
-                                if factura_existente:
+                                if Factura.existe_factura_en_periodo(usuario, periodo_inicio, periodo_fin):
                                     logger.warning(f"Ya existe una factura para el usuario {usuario.contrato} en este período")
+                                    facturas_existentes += 1
                                     continue
                                 
-                                # Generar nueva factura
+                                # Verificar si hay lecturas para el período
+                                if not Factura.tiene_lecturas_en_periodo(usuario, periodo_inicio, periodo_fin):
+                                    logger.warning(f"No hay lecturas para el usuario {usuario.contrato} en el período especificado")
+                                    usuarios_sin_lecturas += 1
+                                    continue
+                                
+                                # Obtener las lecturas del período
                                 lecturas = HistoricoLectura.objects.filter(
                                     usuario=usuario,
                                     fecha_lectura__range=[periodo_inicio, periodo_fin]
-                                ).order_by('fecha_lectura')
+                                ).order_by('-fecha_lectura')
                                 
                                 if not lecturas.exists():
                                     logger.warning(f"No hay lecturas para el usuario {usuario.contrato} en el período especificado")
                                     continue
                                 
-                                # Calcular consumo
-                                ultima_lectura = lecturas.last().lectura
-                                primera_lectura = lecturas.first().lectura
-                                consumo = ultima_lectura - primera_lectura
-                                valor_total = consumo * 1000  # Ajusta según tu lógica de negocio
+                                # Validar que haya al menos dos lecturas
+                                if lecturas.count() < 2:
+                                    logger.warning(f"No hay suficientes lecturas para el usuario {usuario.contrato}")
+                                    continue
                                 
-                                # Crear la factura en la base de datos usando el consecutivo actual
-                                factura = Factura.objects.create(
-                                    usuario=usuario,
-                                    consecutivo=consecutivo_actual,
-                                    fecha_emision=fecha_emision,
-                                    periodo_inicio=periodo_inicio,
-                                    periodo_fin=periodo_fin,
-                                    consumo=consumo,
-                                    valor_total=valor_total,
-                                    pdf_generado=True
-                                )
-                                facturas_generadas.append(factura)
-                                consecutivo_actual += 1
+                                # Ordenar las lecturas por fecha
+                                lecturas = lecturas.order_by('fecha_lectura')  # Cambiar a orden ascendente
+                                primera_lectura = lecturas.first()  # La más antigua
+                                ultima_lectura = lecturas.last()   # La más reciente
+                                
+                                # Calcular consumo
+                                consumo = ultima_lectura.lectura - primera_lectura.lectura
+                                # Validar que haya al menos dos lecturas diferentes
+                                if lecturas.count() < 2:
+                                    logger.warning(f"No hay suficientes lecturas para el usuario {usuario.contrato}")
+                                    continue
+                                
+                                # Validar que el consumo sea positivo
+                                if consumo < 0:
+                                    logger.error(f"Consumo negativo detectado para usuario {usuario.contrato}: {consumo}")
+                                    continue
+                                    
+                                # Convertir todos los valores a Decimal
+                                valor_por_m3 = Decimal('1000')
+                                consumo_decimal = Decimal(str(consumo))
+                                valor_consumo = consumo_decimal * valor_por_m3
+                                valor_consumo = valor_consumo.quantize(Decimal('0.01'))
+                                
+                                # Calcular cuotas
+                                cuota_credito = Decimal(str(usuario.actualizar_credito_factura())).quantize(Decimal('0.01'))
+                                cuota_otros_gastos = Decimal(str(usuario.actualizar_otros_gastos_factura())).quantize(Decimal('0.01'))
+                                
+                                # Calcular valor total incluyendo cuotas
+                                valor_total = valor_consumo + cuota_credito + cuota_otros_gastos
+                                valor_total = valor_total.quantize(Decimal('0.01'))
+                                
+                                try:
+                                    # Crear la factura en la base de datos usando el consecutivo actual
+                                    factura = Factura.objects.create(
+                                        usuario=usuario,
+                                        consecutivo=consecutivo_actual,
+                                        fecha_emision=fecha_emision,
+                                        periodo_inicio=periodo_inicio,
+                                        periodo_fin=periodo_fin,
+                                        consumo=Decimal(str(consumo)),
+                                        valor_total=valor_total,
+                                        pdf_generado=True
+                                    )
+                                    consecutivo_actual += 1
+                                except IntegrityError as e:
+                                    logger.error(f"Error al crear factura para {usuario.contrato}: {str(e)}")
+                                    consecutivo_actual += 1
+                                    continue
                                 
                                 # Generar PDF
                                 template = get_template('factura_template.html')
                                 # Obtener el histórico de lecturas para mostrar en la factura
                                 historico_lecturas = HistoricoLectura.objects.filter(
-                                    usuario=usuario
+                                    usuario=usuario,
+                                    fecha_lectura__lte=periodo_fin  # Asegurar que solo tomamos lecturas hasta el fin del período
                                 ).order_by('-fecha_lectura')[:6]  # Últimas 6 lecturas
                                 
-                                # Obtener la lectura anterior si existe
-                                lectura_anterior = None
-                                if len(historico_lecturas) > 1:
-                                    lectura_anterior = historico_lecturas[1]
+                                # Obtener la lectura anterior al período
+                                lectura_anterior = HistoricoLectura.objects.filter(
+                                    usuario=usuario,
+                                    fecha_lectura__lt=periodo_inicio
+                                ).order_by('-fecha_lectura').first()
                                 
                                 context = {
                                     'factura': factura,
@@ -580,7 +660,23 @@ def generar_factura(request):
                     # Asegurarse de que el buffer está al inicio antes de leer
                     zip_buffer.seek(0)
                     response = HttpResponse(zip_buffer.getvalue(), content_type='application/zip')
+                    # Preparar mensaje de resumen
+                    total_usuarios = len(usuarios)
+                    facturas_generadas_count = len(facturas_generadas)
+                    resumen = f"""
+                    Resumen de generación de facturas:
+                    - Total de usuarios: {total_usuarios}
+                    - Facturas generadas: {facturas_generadas_count}
+                    - Facturas existentes: {facturas_existentes}
+                    - Usuarios sin lecturas: {usuarios_sin_lecturas}
+                    """
+                    logger.info(resumen)
+                    
                     response['Content-Disposition'] = f'attachment; filename=facturas_{fecha_emision.strftime("%Y%m%d")}.zip'
+                    
+                    # Agregar mensaje de éxito con el resumen
+                    messages.success(request, resumen)
+                    
                     return response
                     
                 except Exception as e:

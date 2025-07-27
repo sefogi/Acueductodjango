@@ -1,6 +1,7 @@
 {% load static %}
 {% load acueducto_filters %}
 {% load fecha_espanol %}
+{% load numero_entero %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -252,7 +253,7 @@
                     <td colspan="2">
                         {{ usuario.credito_descripcion|default:"Cuota actual del crédito" }}
                         <br>
-                        <small>Cuota {{ usuario.credito_total_cuotas|sub:credito_cuotas_restantes }} de {{ usuario.credito_total_cuotas }}</small>
+                        <small>Cuota {{ usuario.credito_total_cuotas|sub:credito_cuotas_restantes|numero_entero }} de {{ usuario.credito_total_cuotas }}</small>
                     </td>
                     <td>{{ cuota_credito|format_cop:0 }}</td>
                 </tr>
@@ -263,7 +264,7 @@
                     <td colspan="2">
                         {{ usuario.otros_gastos_descripcion }}
                         <br>
-                        <small>Cuota {{ usuario.otros_gastos_total_cuotas|sub:otros_gastos_cuotas_restantes }} de {{ usuario.otros_gastos_total_cuotas }}</small>
+                        <small>Cuota {{ usuario.otros_gastos_total_cuotas|sub:otros_gastos_cuotas_restantes|numero_entero }} de {{ usuario.otros_gastos_total_cuotas }}</small>
                     </td>
                     <td>{{ cuota_otros_gastos|format_cop:0 }}</td>
                 </tr>

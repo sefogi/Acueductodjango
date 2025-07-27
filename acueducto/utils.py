@@ -15,7 +15,7 @@ def obtener_mes_espanol(numero_mes):
     }
     return meses[numero_mes]
 
-def formatear_fecha_espanol(fecha):
+def formatear_fecha_espanol(fecha) -> str:
     """
     Formatea una fecha en español.
 
